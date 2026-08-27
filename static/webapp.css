@@ -510,3 +510,149 @@ body {
 .btn-rating:hover {
     background: #e94560;
 }
+
+/* ============================================================
+   Классы и тест уровня
+   ============================================================ */
+.classes-controls h3 {
+    margin: 0 0 8px;
+    color: #eee;
+}
+
+.classes-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+}
+
+.class-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.class-option:hover {
+    border-color: #e94560;
+}
+
+.class-option input {
+    margin-top: 3px;
+    accent-color: #e94560;
+}
+
+.class-option span {
+    display: flex;
+    flex-direction: column;
+    color: #eee;
+}
+
+.class-option small {
+    color: #bbb;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.all-option {
+    border-color: #e94560;
+    background: #1a1a2e;
+}
+
+.classes-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.placement-content {
+    margin-top: 16px;
+}
+
+.placement-card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.placement-progress {
+    color: #e94560;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.placement-class {
+    display: inline-block;
+    background: #0f3460;
+    color: #eee;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.placement-question {
+    color: #eee;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.placement-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.placement-option {
+    text-align: left;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.placement-option:hover {
+    background: #0f3460;
+    border-color: #e94560;
+}
+
+.placement-result {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.placement-result h3 {
+    color: #eee;
+    margin: 0 0 12px;
+}
+
+.placement-score {
+    color: #bbb;
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.placement-level {
+    color: #eee;
+    font-size: 18px;
+    margin-bottom: 8px;
+}
+
+.placement-level strong {
+    color: #e94560;
+}

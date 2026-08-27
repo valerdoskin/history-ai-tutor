@@ -44,6 +44,15 @@ class Database:
                     streak INTEGER DEFAULT 0,
                     last_active INTEGER DEFAULT 0,
                     rank TEXT DEFAULT 'Новичок',
+                    selected_classes TEXT DEFAULT 'all',
+                    created_at INTEGER DEFAULT 0
+                );
+
+                CREATE TABLE IF NOT EXISTS placement_results (
+                    user_id INTEGER PRIMARY KEY,
+                    score INTEGER DEFAULT 0,
+                    total INTEGER DEFAULT 0,
+                    level INTEGER DEFAULT 1,
                     created_at INTEGER DEFAULT 0
                 );
 
@@ -109,6 +118,15 @@ class Database:
                 );
                 """
             )
+            # Миграция для существующих БД: добавляем новые колонки/таблицы
+            self._migrate(conn)
+
+    def _migrate(self, conn):
+        """Добавляет новые колонки/таблицы в существующую схему."""
+        # Колонка selected_classes в users
+        cols = {r["name"] for r in conn.execute("PRAGMA table_info(users)").fetchall()}
+        if "selected_classes" not in cols:
+            conn.execute("ALTER TABLE users ADD COLUMN selected_classes TEXT DEFAULT 'all'")
 
     # ============================================================
     # Пользователи
@@ -131,6 +149,7 @@ class Database:
                 "xp": 0,
                 "streak": 0,
                 "rank": "Новичок",
+                "selected_classes": "all",
                 "created_at": now,
             }
 
@@ -294,6 +313,63 @@ class Database:
                 "correct_questions": correct_q,
                 "accuracy": round(correct_q / total_q * 100, 1) if total_q else 0,
             }
+
+    # ============================================================
+    # Выбор классов обучения
+    # ============================================================
+    def get_selected_classes(self, user_id):
+        """Возвращает список выбранных классов (или 'all' для всей базы)."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT selected_classes FROM users WHERE user_id=?", (user_id,)
+            ).fetchone()
+            if not row or not row["selected_classes"]:
+                return "all"
+            return row["selected_classes"]
+
+    def set_selected_classes(self, user_id, classes):
+        """Сохраняет выбранные классы. classes — строка '5,6,7', список int или 'all'."""
+        if classes == "all":
+            value = "all"
+        elif isinstance(classes, str):
+            # Уже строка вида "5,6,7"
+            value = classes
+        else:
+            try:
+                value = ",".join(str(int(c)) for c in classes)
+            except (TypeError, ValueError):
+                value = "all"
+        with self._conn() as conn:
+            conn.execute(
+                "UPDATE users SET selected_classes=? WHERE user_id=?",
+                (value, user_id),
+            )
+
+    # ============================================================
+    # Placement-тест уровня
+    # ============================================================
+    def save_placement_result(self, user_id, score, total, level):
+        """Сохраняет результат изначального теста уровня."""
+        now = int(time.time())
+        with self._conn() as conn:
+            conn.execute(
+                """INSERT INTO placement_results (user_id, score, total, level, created_at)
+                   VALUES (?,?,?,?,?)
+                   ON CONFLICT(user_id) DO UPDATE SET
+                       score=excluded.score,
+                       total=excluded.total,
+                       level=excluded.level,
+                       created_at=excluded.created_at""",
+                (user_id, score, total, level, now),
+            )
+
+    def get_placement_result(self, user_id):
+        """Возвращает результат placement-теста или None."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM placement_results WHERE user_id=?", (user_id,)
+            ).fetchone()
+            return dict(row) if row else None
 
     # ============================================================
     # SRS (интервальное повторение)

@@ -31,6 +31,7 @@ from services import (
     exam_service,
     gamification_service,
     knowledge_service,
+    placement_service,
     progress_service,
     tutor_service,
 )
@@ -65,6 +66,8 @@ def _register_handlers(application):
     application.add_handler(CommandHandler("practice", cmd_practice))
     application.add_handler(CommandHandler("exam", cmd_exam))
     application.add_handler(CommandHandler("weak", cmd_weak))
+    application.add_handler(CommandHandler("test", cmd_test))
+    application.add_handler(CommandHandler("classes", cmd_classes))
     application.add_handler(CallbackQueryHandler(handle_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
@@ -171,6 +174,90 @@ async def cmd_weak(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
+async def cmd_classes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /classes — выбор классов для обучения."""
+    user_id = update.effective_user.id
+    classes_info = placement_service.get_classes_info()
+    current = db.get_selected_classes(user_id)
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📚 Вся база знаний", callback_data="cls_all")],
+            [
+                InlineKeyboardButton(f"{c['class']} класс", callback_data=f"cls_{c['class']}")
+                for c in classes_info
+            ],
+            [InlineKeyboardButton("✅ Готово", callback_data="cls_done")],
+        ]
+    )
+    text = (
+        "🎓 *Выбери классы для обучения*\n\n"
+        "Можно выбрать один или несколько классов, либо всю базу знаний.\n\n"
+        f"Текущий выбор: {current if current != 'all' else 'вся база знаний'}\n\n"
+        "Нажимай на классы, чтобы выбрать. Когда закончишь — нажми «Готово»."
+    )
+    await update.message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+async def cmd_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /test — пройти изначальный тест уровня."""
+    user_id = update.effective_user.id
+    progress_service.record_activity(user_id)
+    test = placement_service.generate_placement_test(user_id=user_id)
+    if not test:
+        await update.message.reply_text("Не удалось сгенерировать тест. Попробуй ещё раз.")
+        return
+
+    # Сохраняем тест в контексте пользователя
+    context.user_data["placement"] = test
+    context.user_data["placement_idx"] = 0
+    context.user_data["placement_answers"] = []
+
+    await _send_placement_question(update.message, context)
+
+
+async def _send_placement_question(message, context):
+    """Отправляет текущий вопрос теста уровня."""
+    test = context.user_data.get("placement", [])
+    idx = context.user_data.get("placement_idx", 0)
+    if idx >= len(test):
+        await _finish_placement(message, context)
+        return
+
+    q = test[idx]
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(f"{i+1}. {opt[:30]}", callback_data=f"plc_{idx}_{i}")
+                for i, opt in enumerate(q["options"])
+            ]
+        ]
+    )
+    text = (
+        f"📝 *Тест уровня — вопрос {idx + 1} из {len(test)}*\n"
+        f"({q['class']} класс)\n\n"
+        f"{q['question']}"
+    )
+    await message.reply_text(text, reply_markup=keyboard, parse_mode="Markdown")
+
+
+async def _finish_placement(message, context):
+    """Завершает тест уровня и показывает результат."""
+    user_id = message.from_user.id
+    answers = context.user_data.get("placement_answers", [])
+    result = placement_service.submit_placement(user_id, answers)
+    if "error" in result:
+        await message.reply_text(result["error"])
+        return
+    await message.reply_text(
+        f"🎉 *Тест уровня пройден!*\n\n"
+        f"Правильных ответов: {result['score']} из {result['total']}\n"
+        f"Твой уровень: *{result['level']}* ({result['rank']})\n\n"
+        f"Мы подберём задания под твой уровень знаний!",
+        parse_mode="Markdown",
+    )
+
+
 # ============================================================
 # Обработка сообщений
 # ============================================================
@@ -251,6 +338,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await _start_exam(query, exam_type)
     elif data.startswith("quiz_"):
         await _handle_quiz_answer(query, data)
+    elif data.startswith("cls_"):
+        await _handle_class_selection(query, context, data)
+    elif data.startswith("plc_"):
+        await _handle_placement_answer(query, context, data)
 
 
 async def _start_exam(query, exam_type):
@@ -286,6 +377,86 @@ async def _handle_quiz_answer(query, data):
     user_id = query.from_user.id
     # Упрощённая обработка — в реальном приложении хранить состояние
     await query.edit_message_text("Ответ принят! ✅")
+
+
+async def _handle_class_selection(query, context, data):
+    """Обрабатывает выбор классов через inline-кнопки."""
+    user_id = query.from_user.id
+    action = data.split("_", 1)[1]
+
+    # Храним выбранные классы в user_data
+    selected = context.user_data.get("cls_selected", set())
+
+    if action == "all":
+        selected = set()
+        context.user_data["cls_all"] = True
+    elif action == "done":
+        if context.user_data.get("cls_all"):
+            db.set_selected_classes(user_id, "all")
+        elif selected:
+            db.set_selected_classes(user_id, ",".join(sorted(selected)))
+        else:
+            await query.edit_message_text(
+                "Выбери хотя бы один класс или «Всю базу знаний»."
+            )
+            return
+        context.user_data.pop("cls_selected", None)
+        context.user_data.pop("cls_all", None)
+        await query.edit_message_text("✅ Выбор классов сохранён!")
+        return
+    else:
+        # Переключаем конкретный класс
+        context.user_data["cls_all"] = False
+        cls = action
+        if cls in selected:
+            selected.discard(cls)
+        else:
+            selected.add(cls)
+        context.user_data["cls_selected"] = selected
+
+    # Показываем текущий выбор
+    classes_info = placement_service.get_classes_info()
+    current = "вся база знаний" if context.user_data.get("cls_all") else (
+        ", ".join(sorted(selected)) + " класс" if selected else "не выбран"
+    )
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("📚 Вся база знаний", callback_data="cls_all")],
+            [
+                InlineKeyboardButton(
+                    f"{'✅ ' if c['class'] in selected else ''}{c['class']} класс",
+                    callback_data=f"cls_{c['class']}",
+                )
+                for c in classes_info
+            ],
+            [InlineKeyboardButton("✅ Готово", callback_data="cls_done")],
+        ]
+    )
+    await query.edit_message_text(
+        f"🎓 *Выбери классы для обучения*\n\n"
+        f"Текущий выбор: {current}\n\n"
+        "Нажимай на классы, чтобы выбрать. Когда закончишь — нажми «Готово».",
+        reply_markup=keyboard,
+        parse_mode="Markdown",
+    )
+
+
+async def _handle_placement_answer(query, context, data):
+    """Обрабатывает ответ на вопрос теста уровня."""
+    user_id = query.from_user.id
+    parts = data.split("_")
+    idx = int(parts[1])
+    answer_index = int(parts[2])
+
+    test = context.user_data.get("placement", [])
+    answers = context.user_data.get("placement_answers", [])
+    if idx < len(test):
+        q = test[idx]
+        answers.append({"question_id": q["id"], "answer_index": answer_index})
+        context.user_data["placement_answers"] = answers
+
+    context.user_data["placement_idx"] = idx + 1
+    await _send_placement_question(query.message, context)
 
 
 async def _send_quiz(update, question):
@@ -334,7 +505,10 @@ def api_ask():
     user_id = data.get("user_id")
     if not query:
         return jsonify({"error": "query required"}), 400
-    result = tutor_service.answer_question(query, user_id=user_id)
+    classes = "all"
+    if user_id and user_id != "null":
+        classes = db.get_selected_classes(int(user_id))
+    result = tutor_service.answer_question(query, user_id=user_id, class_filter=classes)
     return jsonify(result)
 
 
@@ -353,10 +527,13 @@ def api_exam():
     exam_type = request.args.get("type", "oge")
     user_id = request.args.get("user_id")
     try:
+        classes = "all"
+        if user_id and user_id != "null":
+            classes = db.get_selected_classes(int(user_id))
         if exam_type == "ege":
-            question = exam_service.generate_ege_question()
+            question = exam_service.generate_ege_question(classes=classes)
         else:
-            question = exam_service.generate_oge_question()
+            question = exam_service.generate_oge_question(classes=classes)
         if user_id and user_id != "null":
             progress_service.record_activity(int(user_id))
         return jsonify(question)
@@ -367,9 +544,16 @@ def api_exam():
 
 @app.route("/api/topics", methods=["GET"])
 def api_topics():
-    """API для Web App: список тем (глав) из базы знаний."""
+    """API для Web App: список тем (глав) из базы знаний.
+
+    Если передан user_id — темы фильтруются по выбранным классам пользователя.
+    """
+    user_id = request.args.get("user_id")
     try:
-        return jsonify({"topics": knowledge_service.get_topics()})
+        classes = "all"
+        if user_id and user_id != "null":
+            classes = db.get_selected_classes(int(user_id))
+        return jsonify({"topics": knowledge_service.get_topics(classes=classes)})
     except Exception as e:
         logger.error(f"Ошибка получения тем: {e}")
         return jsonify({"error": "Не удалось получить темы"}), 500
@@ -419,6 +603,78 @@ def api_terms():
     except Exception as e:
         logger.error(f"Ошибка получения терминов: {e}")
         return jsonify({"error": "Не удалось получить термины"}), 500
+
+
+@app.route("/api/classes", methods=["GET"])
+def api_classes():
+    """API для Web App: список классов с описанием и количеством чанков."""
+    try:
+        return jsonify({"classes": placement_service.get_classes_info()})
+    except Exception as e:
+        logger.error(f"Ошибка получения классов: {e}")
+        return jsonify({"error": "Не удалось получить классы"}), 500
+
+
+@app.route("/api/user/classes", methods=["GET", "POST"])
+def api_user_classes():
+    """API для Web App: получение/сохранение выбранных классов пользователя."""
+    if request.method == "GET":
+        user_id = request.args.get("user_id")
+        if not user_id or user_id == "null":
+            return jsonify({"error": "user_id required"}), 400
+        try:
+            selected = db.get_selected_classes(int(user_id))
+            return jsonify({"classes": selected})
+        except Exception as e:
+            logger.error(f"Ошибка получения классов пользователя: {e}")
+            return jsonify({"error": "Не удалось получить классы"}), 500
+
+    # POST
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    classes = data.get("classes", "all")
+    if not user_id or user_id == "null":
+        return jsonify({"error": "user_id required"}), 400
+    try:
+        db.get_or_create_user(int(user_id))
+        db.set_selected_classes(int(user_id), classes)
+        return jsonify({"status": "ok", "classes": db.get_selected_classes(int(user_id))})
+    except Exception as e:
+        logger.error(f"Ошибка сохранения классов пользователя: {e}")
+        return jsonify({"error": "Не удалось сохранить классы"}), 500
+
+
+@app.route("/api/placement", methods=["GET"])
+def api_placement():
+    """API для Web App: генерация изначального теста уровня."""
+    user_id = request.args.get("user_id")
+    try:
+        uid = int(user_id) if user_id and user_id != "null" else None
+        test = placement_service.generate_placement_test(user_id=uid)
+        return jsonify({"questions": test})
+    except Exception as e:
+        logger.error(f"Ошибка генерации теста уровня: {e}")
+        return jsonify({"error": "Не удалось сгенерировать тест"}), 500
+
+
+@app.route("/api/placement/submit", methods=["POST"])
+def api_placement_submit():
+    """API для Web App: проверка теста уровня и сохранение результата."""
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    answers = data.get("answers", [])
+    if not user_id or user_id == "null":
+        return jsonify({"error": "user_id required"}), 400
+    if not answers:
+        return jsonify({"error": "answers обязательны"}), 400
+    try:
+        result = placement_service.submit_placement(int(user_id), answers)
+        if "error" in result:
+            return jsonify(result), 404
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Ошибка проверки теста уровня: {e}")
+        return jsonify({"error": "Не удалось проверить тест"}), 500
 
 
 @app.route("/api/exam/submit", methods=["POST"])

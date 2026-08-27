@@ -12,20 +12,21 @@ from services import llm_service, rag_service
 logger = logging.getLogger(__name__)
 
 
-def answer_question(query, user_id=None, history=None):
+def answer_question(query, user_id=None, history=None, class_filter=None):
     """
     Отвечает на вопрос пользователя через RAG.
     history — список последних сообщений для контекста диалога.
+    class_filter — фильтр по классам (строка '5,6,7' или 'all').
     """
-    return rag_service.grounded_answer(query, user_id=user_id)
+    return rag_service.grounded_answer(query, user_id=user_id, class_filter=class_filter)
 
 
-def explain_topic(topic, user_id=None):
+def explain_topic(topic, user_id=None, class_filter=None):
     """
     Объясняет тему простым языком на основе базы знаний.
     """
     query = f"Объясни тему: {topic}"
-    return rag_service.grounded_answer(query, user_id=user_id)
+    return rag_service.grounded_answer(query, user_id=user_id, class_filter=class_filter)
 
 
 def quiz_question(topic=None, user_id=None):

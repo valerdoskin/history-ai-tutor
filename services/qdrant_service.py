@@ -59,11 +59,53 @@ def upsert_points(points):
     client.upsert(collection_name=config.QDRANT_COLLECTION, points=points)
 
 
-def search(query_vector, top_k=None, score_threshold=None):
-    """Ищет релевантные точки по вектору запроса."""
+def _build_class_filter(class_filter):
+    """Строит Qdrant-фильтр по классам (по source_file)."""
+    if not class_filter or class_filter == "all":
+        return None
+    from qdrant_client.http import models
+
+    try:
+        classes = {int(c) for c in str(class_filter).split(",") if c.strip()}
+    except (TypeError, ValueError):
+        return None
+
+    # Сопоставление класса с подстроками в source_file
+    class_patterns = {
+        5: ["5_klass"],
+        6: ["6_klass"],
+        7: ["7_klass"],
+        8: ["8_klass"],
+        9: ["9_klass"],
+        10: ["10kl", "10_kl", "vseobschaya_10"],
+    }
+    patterns = []
+    for cls in classes:
+        patterns.extend(class_patterns.get(cls, []))
+    if not patterns:
+        return None
+
+    # OR по паттернам source_file
+    return models.Filter(
+        should=[
+            models.FieldCondition(
+                key="source_file",
+                match=models.MatchText(text=p),
+            )
+            for p in patterns
+        ]
+    )
+
+
+def search(query_vector, top_k=None, score_threshold=None, class_filter=None):
+    """Ищет релевантные точки по вектору запроса.
+
+    class_filter — фильтр по классам (строка '5,6,7' или 'all').
+    """
     client = get_client()
     top_k = top_k or config.RAG_TOP_K
     score_threshold = score_threshold if score_threshold is not None else config.RAG_SCORE_THRESHOLD
+    query_filter = _build_class_filter(class_filter)
 
     # Совместимость с разными версиями qdrant-client:
     # - старые версии используют client.search(query_vector=...)
@@ -74,6 +116,7 @@ def search(query_vector, top_k=None, score_threshold=None):
             query=query_vector,
             limit=top_k,
             score_threshold=score_threshold,
+            query_filter=query_filter,
             with_payload=True,
         )
         return resp.points
@@ -82,6 +125,7 @@ def search(query_vector, top_k=None, score_threshold=None):
         query_vector=query_vector,
         limit=top_k,
         score_threshold=score_threshold,
+        query_filter=query_filter,
         with_payload=True,
     )
     return results

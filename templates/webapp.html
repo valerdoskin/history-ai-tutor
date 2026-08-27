@@ -19,6 +19,7 @@
             <button class="tab" data-tab="practice">📝 Практика</button>
             <button class="tab" data-tab="topics">📚 Темы</button>
             <button class="tab" data-tab="cards">🃏 Карточки</button>
+            <button class="tab" data-tab="classes">🎓 Классы</button>
             <button class="tab" data-tab="profile">👤 Профиль</button>
         </nav>
 
@@ -69,6 +70,24 @@
             </div>
             <div id="cards-content" class="cards-content">
                 <p class="hint">Повторяй материал по карточкам для лучшего запоминания!</p>
+            </div>
+        </section>
+
+        <!-- Классы -->
+        <section id="tab-classes" class="tab-content">
+            <div class="classes-controls">
+                <h3>🎓 Выбери классы для обучения</h3>
+                <p class="hint">Можно выбрать один или несколько классов, либо всю базу знаний.</p>
+                <div id="classes-list" class="classes-list">
+                    <p class="hint">Загрузка классов...</p>
+                </div>
+                <div class="classes-actions">
+                    <button id="classes-save-btn" class="btn-primary">💾 Сохранить выбор</button>
+                    <button id="placement-btn" class="btn-secondary">📝 Пройти тест уровня</button>
+                </div>
+            </div>
+            <div id="placement-content" class="placement-content">
+                <p class="hint">Пройди изначальный тест уровня, чтобы мы подобрали подходящие задания!</p>
             </div>
         </section>
 

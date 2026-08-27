@@ -13,13 +13,15 @@ from services import embedding_service, qdrant_service
 logger = logging.getLogger(__name__)
 
 
-def retrieve(query, top_k=None):
+def retrieve(query, top_k=None, class_filter=None):
     """
     Ищет релевантные чанки по запросу.
     Возвращает список словарей с текстом и метаданными.
+
+    class_filter — фильтр по классам (строка '5,6,7' или 'all').
     """
     query_vector = embedding_service.embed_query(query)
-    results = qdrant_service.search(query_vector, top_k=top_k)
+    results = qdrant_service.search(query_vector, top_k=top_k, class_filter=class_filter)
     chunks = []
     for r in results:
         payload = r.payload or {}
@@ -62,14 +64,16 @@ def build_context(chunks, max_chars=8000):
     return "\n\n".join(parts)
 
 
-def grounded_answer(query, user_id=None, top_k=None):
+def grounded_answer(query, user_id=None, top_k=None, class_filter=None):
     """
     Полный RAG-ответ: поиск чанков + генерация ответа LLM строго по ним.
     Возвращает dict: {answer, sources, chunks}.
+
+    class_filter — фильтр по классам (строка '5,6,7' или 'all').
     """
     from services import llm_service
 
-    chunks = retrieve(query, top_k=top_k)
+    chunks = retrieve(query, top_k=top_k, class_filter=class_filter)
     if not chunks:
         return {
             "answer": "К сожалению, я не нашёл информации по этому вопросу в базе знаний. "

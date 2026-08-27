@@ -30,9 +30,9 @@ EGE_TYPES = {
 }
 
 
-def _get_context(topic, max_chars=4000):
+def _get_context(topic, max_chars=4000, class_filter=None):
     query = topic or "история России для ОГЭ и ЕГЭ"
-    chunks = rag_service.retrieve(query, top_k=4)
+    chunks = rag_service.retrieve(query, top_k=4, class_filter=class_filter)
     return rag_service.build_context(chunks, max_chars=max_chars)
 
 
@@ -48,14 +48,16 @@ def _normalize_question(result):
     return result
 
 
-def generate_oge_question(topic=None, qtype=None):
+def generate_oge_question(topic=None, qtype=None, classes=None):
     """
     Генерирует задание ОГЭ.
     Возвращает dict с вопросом, вариантами и правильным ответом.
+
+    classes — фильтр по классам (строка '5,6,7' или 'all').
     """
     qtype = qtype or "date_event"
     type_desc = OGE_TYPES.get(qtype, OGE_TYPES["date_event"])
-    context = _get_context(topic)
+    context = _get_context(topic, class_filter=classes)
 
     system_prompt = (
         "Ты — составитель заданий ОГЭ по истории по формату ФИПИ. "
@@ -78,14 +80,16 @@ def generate_oge_question(topic=None, qtype=None):
     return _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
 
 
-def generate_ege_question(topic=None, qtype=None):
+def generate_ege_question(topic=None, qtype=None, classes=None):
     """
     Генерирует задание ЕГЭ.
     Возвращает dict с вопросом и правильным ответом.
+
+    classes — фильтр по классам (строка '5,6,7' или 'all').
     """
     qtype = qtype or "short_answer"
     type_desc = EGE_TYPES.get(qtype, EGE_TYPES["short_answer"])
-    context = _get_context(topic)
+    context = _get_context(topic, class_filter=classes)
 
     system_prompt = (
         "Ты — составитель заданий ЕГЭ по истории по формату ФИПИ. "

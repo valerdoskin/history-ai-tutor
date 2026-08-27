@@ -208,5 +208,104 @@ class TestTutorService(unittest.TestCase):
         self.assertFalse(result["correct"])
 
 
+class TestSelectedClasses(unittest.TestCase):
+    def setUp(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+        self.db = Database(db_path="/tmp/test_tutor_services.db")
+
+    def tearDown(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+
+    def test_default_selected_classes(self):
+        self.db.get_or_create_user(1)
+        self.assertEqual(self.db.get_selected_classes(1), "all")
+
+    def test_set_selected_classes(self):
+        self.db.get_or_create_user(1)
+        self.db.set_selected_classes(1, "5,6,7")
+        self.assertEqual(self.db.get_selected_classes(1), "5,6,7")
+
+    def test_set_selected_classes_all(self):
+        self.db.get_or_create_user(1)
+        self.db.set_selected_classes(1, "all")
+        self.assertEqual(self.db.get_selected_classes(1), "all")
+
+    def test_save_placement_result(self):
+        self.db.get_or_create_user(1)
+        self.db.save_placement_result(1, 8, 10, 4)
+        result = self.db.get_placement_result(1)
+        self.assertEqual(result["score"], 8)
+        self.assertEqual(result["total"], 10)
+        self.assertEqual(result["level"], 4)
+
+
+class TestPlacementService(unittest.TestCase):
+    def setUp(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+        self.db = Database(db_path="/tmp/test_tutor_services.db")
+
+    def tearDown(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+
+    def test_get_classes_info(self):
+        from services import placement_service
+        info = placement_service.get_classes_info()
+        self.assertEqual(len(info), 6)
+        classes = [c["class"] for c in info]
+        self.assertEqual(classes, [5, 6, 7, 8, 9, 10])
+        for c in info:
+            self.assertTrue(c["description"])
+
+    def test_get_class_from_source(self):
+        from services import placement_service
+        self.assertEqual(placement_service.get_class_from_source("5_klass.docx"), 5)
+        self.assertEqual(placement_service.get_class_from_source("6_klass.docx"), 6)
+        self.assertEqual(placement_service.get_class_from_source("7_klass.docx"), 7)
+        self.assertEqual(placement_service.get_class_from_source("8_klass.docx"), 8)
+        self.assertEqual(placement_service.get_class_from_source("9_klass.docx"), 9)
+        self.assertEqual(placement_service.get_class_from_source("Vseobschaya_10.docx"), 10)
+        self.assertIsNone(placement_service.get_class_from_source("unknown.docx"))
+
+    def test_generate_placement_test(self):
+        from services import placement_service
+        self.db.get_or_create_user(1)
+        test = placement_service.generate_placement_test(user_id=1, num_questions=10)
+        self.assertEqual(len(test), 10)
+        for q in test:
+            self.assertIn("question", q)
+            self.assertIn("options", q)
+            self.assertIn("correct_index", q)
+            self.assertIn("class", q)
+            self.assertGreaterEqual(len(q["options"]), 2)
+
+    def test_submit_placement_all_correct(self):
+        from services import placement_service
+        self.db.get_or_create_user(1)
+        test = placement_service.generate_placement_test(user_id=1, num_questions=10)
+        answers = [{"question_id": q["id"], "answer_index": q["correct_index"]} for q in test]
+        result = placement_service.submit_placement(1, answers)
+        self.assertEqual(result["score"], 10)
+        self.assertEqual(result["total"], 10)
+        self.assertEqual(result["level"], 5)
+        self.assertEqual(result["rank"], "Эксперт")
+
+    def test_submit_placement_all_wrong(self):
+        from services import placement_service
+        self.db.get_or_create_user(1)
+        test = placement_service.generate_placement_test(user_id=1, num_questions=10)
+        answers = [
+            {"question_id": q["id"], "answer_index": (q["correct_index"] + 1) % len(q["options"])}
+            for q in test
+        ]
+        result = placement_service.submit_placement(1, answers)
+        self.assertEqual(result["score"], 0)
+        self.assertEqual(result["level"], 1)
+        self.assertEqual(result["rank"], "Новичок")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

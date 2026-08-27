@@ -35,11 +35,47 @@ def _load_chunks():
     return _chunks
 
 
-def get_topics():
-    """Возвращает список тем (глав) с количеством чанков и параграфов."""
+def get_class_from_source(source_file):
+    """Определяет класс по имени файла-источника."""
+    s = (source_file or "").lower()
+    if "5_klass" in s:
+        return 5
+    if "6_klass" in s:
+        return 6
+    if "7_klass" in s:
+        return 7
+    if "8_klass" in s:
+        return 8
+    if "9_klass" in s:
+        return 9
+    if "10kl" in s or "10_kl" in s or "vseobschaya_10" in s:
+        return 10
+    return None
+
+
+def _parse_classes_filter(classes):
+    """Преобразует фильтр классов в set или None (все классы)."""
+    if not classes or classes == "all":
+        return None
+    try:
+        return {int(c) for c in str(classes).split(",") if c.strip()}
+    except (TypeError, ValueError):
+        return None
+
+
+def get_topics(classes=None):
+    """Возвращает список тем (глав) с количеством чанков и параграфов.
+
+    classes — фильтр по классам (список int, строка '5,6,7' или 'all').
+    """
     chunks = _load_chunks()
+    class_filter = _parse_classes_filter(classes)
     topics = {}
     for c in chunks:
+        if class_filter is not None:
+            cls = get_class_from_source(c.get("source_file", ""))
+            if cls not in class_filter:
+                continue
         key = (c.get("book_line", ""), c.get("chapter_title", ""))
         if key not in topics:
             topics[key] = {

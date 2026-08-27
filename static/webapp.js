@@ -28,6 +28,7 @@ document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.add('active');
         document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
         if (tab.dataset.tab === 'profile') loadProfile();
+        if (tab.dataset.tab === 'classes') loadClasses();
     });
 });
 
@@ -395,3 +396,169 @@ async function reviewCard(cardId, quality) {
 }
 
 document.getElementById('cards-btn').addEventListener('click', loadCards);
+
+// ============================================================
+// Классы и тест уровня
+// ============================================================
+let selectedClasses = new Set();
+let placementQuestions = [];
+let placementIndex = 0;
+let placementAnswers = [];
+
+async function loadClasses() {
+    const listEl = document.getElementById('classes-list');
+    try {
+        // Загружаем список классов и текущий выбор пользователя
+        const [classesResp, userResp] = await Promise.all([
+            fetch('/api/classes'),
+            fetch(`/api/user/classes?user_id=${userId}`),
+        ]);
+        const classesData = await classesResp.json();
+        const userData = await userResp.json();
+
+        selectedClasses = new Set();
+        const saved = userData.classes || 'all';
+        if (saved !== 'all') {
+            String(saved).split(',').forEach(c => { if (c) selectedClasses.add(parseInt(c)); });
+        }
+
+        const classes = classesData.classes || [];
+        listEl.innerHTML = `
+            <label class="class-option all-option">
+                <input type="checkbox" id="class-all" ${saved === 'all' ? 'checked' : ''}>
+                <span><strong>Вся база знаний</strong> <small>все классы 5–10</small></span>
+            </label>
+            ${classes.map(c => `
+                <label class="class-option">
+                    <input type="checkbox" class="class-checkbox" value="${c.class}"
+                        ${saved !== 'all' && selectedClasses.has(c.class) ? 'checked' : ''}>
+                    <span><strong>${c.class} класс</strong> <small>${c.description}</small></span>
+                </label>
+            `).join('')}
+        `;
+
+        // Обработчики: выбор "вся база" снимает остальные
+        const allCheckbox = document.getElementById('class-all');
+        allCheckbox.addEventListener('change', () => {
+            if (allCheckbox.checked) {
+                document.querySelectorAll('.class-checkbox').forEach(cb => cb.checked = false);
+            }
+        });
+        document.querySelectorAll('.class-checkbox').forEach(cb => {
+            cb.addEventListener('change', () => {
+                if (cb.checked) allCheckbox.checked = false;
+            });
+        });
+    } catch (e) {
+        listEl.innerHTML = '<p class="hint">Ошибка загрузки классов.</p>';
+    }
+}
+
+async function saveClasses() {
+    const allCheckbox = document.getElementById('class-all');
+    let classes = 'all';
+    if (!allCheckbox.checked) {
+        const checked = [...document.querySelectorAll('.class-checkbox:checked')].map(cb => parseInt(cb.value));
+        if (checked.length) {
+            classes = checked.join(',');
+        } else {
+            alert('Выбери хотя бы один класс или всю базу знаний.');
+            return;
+        }
+    }
+    try {
+        const resp = await fetch('/api/user/classes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, classes }),
+        });
+        const data = await resp.json();
+        if (data.status === 'ok') {
+            alert('✅ Выбор классов сохранён!');
+        } else {
+            alert('Ошибка сохранения: ' + (data.error || 'неизвестная'));
+        }
+    } catch (e) {
+        alert('Ошибка соединения при сохранении классов.');
+    }
+}
+
+async function startPlacement() {
+    const content = document.getElementById('placement-content');
+    content.innerHTML = '<p class="hint">Генерация теста уровня...</p>';
+    try {
+        const resp = await fetch(`/api/placement?user_id=${userId}`);
+        const data = await resp.json();
+        placementQuestions = data.questions || [];
+        placementIndex = 0;
+        placementAnswers = [];
+        if (!placementQuestions.length) {
+            content.innerHTML = '<p class="hint">Не удалось сгенерировать тест. Попробуй ещё раз.</p>';
+            return;
+        }
+        renderPlacementQuestion();
+    } catch (e) {
+        content.innerHTML = '<p class="hint">Ошибка генерации теста.</p>';
+    }
+}
+
+function renderPlacementQuestion() {
+    const content = document.getElementById('placement-content');
+    const q = placementQuestions[placementIndex];
+    if (!q) {
+        submitPlacement();
+        return;
+    }
+    content.innerHTML = `
+        <div class="placement-card">
+            <div class="placement-progress">Вопрос ${placementIndex + 1} из ${placementQuestions.length}</div>
+            <div class="placement-class">${q.class} класс</div>
+            <div class="placement-question">${q.question}</div>
+            <div class="placement-options">
+                ${q.options.map((opt, i) => `
+                    <button class="placement-option" data-index="${i}">${opt}</button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    document.querySelectorAll('.placement-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            placementAnswers.push({
+                question_id: q.id,
+                answer_index: parseInt(btn.dataset.index),
+            });
+            placementIndex++;
+            renderPlacementQuestion();
+        });
+    });
+}
+
+async function submitPlacement() {
+    const content = document.getElementById('placement-content');
+    content.innerHTML = '<p class="hint">Проверка ответов...</p>';
+    try {
+        const resp = await fetch('/api/placement/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, answers: placementAnswers }),
+        });
+        const data = await resp.json();
+        if (data.error) {
+            content.innerHTML = `<p class="hint">${data.error}</p>`;
+            return;
+        }
+        content.innerHTML = `
+            <div class="placement-result">
+                <h3>🎉 Тест уровня пройден!</h3>
+                <div class="placement-score">Правильных ответов: ${data.score} из ${data.total}</div>
+                <div class="placement-level">Твой уровень: <strong>${data.level}</strong> (${data.rank})</div>
+                <p class="hint">Мы подберём задания под твой уровень знаний.</p>
+            </div>
+        `;
+    } catch (e) {
+        content.innerHTML = '<p class="hint">Ошибка проверки теста.</p>';
+    }
+}
+
+document.getElementById('classes-save-btn').addEventListener('click', saveClasses);
+document.getElementById('placement-btn').addEventListener('click', startPlacement);
