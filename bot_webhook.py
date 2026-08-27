@@ -341,7 +341,7 @@ def api_ask():
 @app.route("/api/profile", methods=["GET"])
 def api_profile():
     user_id = request.args.get("user_id")
-    if not user_id:
+    if not user_id or user_id == "null":
         return jsonify({"error": "user_id required"}), 400
     profile = gamification_service.get_profile(int(user_id))
     return jsonify(profile)
@@ -357,7 +357,7 @@ def api_exam():
             question = exam_service.generate_ege_question()
         else:
             question = exam_service.generate_oge_question()
-        if user_id:
+        if user_id and user_id != "null":
             progress_service.record_activity(int(user_id))
         return jsonify(question)
     except Exception as e:
@@ -433,7 +433,7 @@ def api_exam_submit():
         return jsonify({"error": "question и answer обязательны"}), 400
     try:
         if exam_type == "ege":
-            correct_answer = question.get("correct_answer")
+            correct_answer = question.get("answer") or question.get("correct_answer")
             is_correct = exam_service.check_ege_answer(user_answer, correct_answer)
         else:
             correct_index = question.get("correct_index")
@@ -443,7 +443,7 @@ def api_exam_submit():
                 question, user_answer, correct_index, options
             )
         result = {"correct": bool(is_correct)}
-        if user_id:
+        if user_id and user_id != "null":
             uid = int(user_id)
             progress_service.record_activity(uid)
             db.add_exam_result(
@@ -468,7 +468,7 @@ def api_exam_submit():
 def api_progress():
     """API для Web App: прогресс пользователя."""
     user_id = request.args.get("user_id")
-    if not user_id:
+    if not user_id or user_id == "null":
         return jsonify({"error": "user_id required"}), 400
     try:
         summary = progress_service.get_progress_summary(int(user_id))

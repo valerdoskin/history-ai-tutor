@@ -93,7 +93,25 @@ practiceBtn.addEventListener('click', async () => {
     }
 });
 
+async function submitAnswer(examType, question, answer) {
+    try {
+        const resp = await fetch('/api/exam/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: examType, user_id: userId, question, answer }),
+        });
+        return await resp.json();
+    } catch (e) {
+        return { correct: false, error: 'Ошибка соединения' };
+    }
+}
+
 function renderQuestion(data) {
+    const examType = document.getElementById('exam-type').value;
+    if (!data || !data.question) {
+        practiceContent.innerHTML = '<p class="hint">Не удалось сгенерировать задание. Попробуй ещё раз.</p>';
+        return;
+    }
     if (data.options) {
         // ОГЭ — выбор ответа
         let html = `<div class="question">${data.question}</div><div class="options">`;
@@ -104,9 +122,12 @@ function renderQuestion(data) {
         practiceContent.innerHTML = html;
 
         document.querySelectorAll('.option').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const correct = btn.dataset.correct === 'true';
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const answer = idx + 1; // номер варианта (1-based)
                 document.querySelectorAll('.option').forEach(b => b.disabled = true);
+                const result = await submitAnswer(examType, data, answer);
+                const correct = result.correct;
                 if (correct) {
                     btn.classList.add('correct');
                 } else {
@@ -124,15 +145,16 @@ function renderQuestion(data) {
             <button class="btn-primary" id="ege-check">Проверить</button>
             <div class="explanation" id="explanation"></div>
         `;
-        document.getElementById('ege-check').addEventListener('click', () => {
+        document.getElementById('ege-check').addEventListener('click', async () => {
             const answer = document.getElementById('ege-answer').value.trim();
-            const correct = answer.toLowerCase() === (data.answer || '').toLowerCase();
+            const result = await submitAnswer(examType, data, answer);
+            const correct = result.correct;
             const expl = document.getElementById('explanation');
             if (correct) {
                 expl.textContent = '✅ Верно! ' + (data.explanation || '');
                 expl.className = 'explanation correct';
             } else {
-                expl.textContent = '❌ Неверно. Правильный ответ: ' + data.answer + '. ' + (data.explanation || '');
+                expl.textContent = '❌ Неверно. Правильный ответ: ' + (data.answer || '') + '. ' + (data.explanation || '');
                 expl.className = 'explanation wrong';
             }
         });
@@ -140,19 +162,138 @@ function renderQuestion(data) {
 }
 
 // ============================================================
+// Темы / База знаний
+// ============================================================
+const topicsContent = document.getElementById('topics-content');
+
+async function loadTopics() {
+    topicsContent.innerHTML = '<p class="hint">Загрузка тем...</p>';
+    try {
+        const resp = await fetch('/api/topics');
+        const data = await resp.json();
+        const topics = data.topics || [];
+        if (!topics.length) {
+            topicsContent.innerHTML = '<p class="hint">Темы не найдены.</p>';
+            return;
+        }
+        let html = '<div class="topic-list">';
+        topics.forEach(t => {
+            html += `<div class="topic-item" data-id="${t.id}">
+                <div class="topic-title">${t.title}</div>
+                <div class="topic-meta">${t.chunks || 0} чанков · ${t.paragraphs || 0} параграфов</div>
+            </div>`;
+        });
+        html += '</div>';
+        topicsContent.innerHTML = html;
+
+        document.querySelectorAll('.topic-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const id = item.dataset.id;
+                topicsContent.innerHTML = '<p class="hint">Загрузка темы...</p>';
+                try {
+                    const r = await fetch(`/api/topic/${id}`);
+                    const d = await r.json();
+                    const paragraphs = d.paragraphs || [];
+                    let ph = `<div class="topic-detail"><h3>${d.title || ''}</h3>`;
+                    paragraphs.forEach((p, i) => {
+                        ph += `<div class="paragraph"><strong>Параграф ${i + 1}</strong><p>${p.text || ''}</p></div>`;
+                    });
+                    ph += '</div>';
+                    topicsContent.innerHTML = ph;
+                } catch (e) {
+                    topicsContent.innerHTML = '<p class="hint">Ошибка загрузки темы.</p>';
+                }
+            });
+        });
+    } catch (e) {
+        topicsContent.innerHTML = '<p class="hint">Ошибка загрузки тем.</p>';
+    }
+}
+
+async function loadChronology() {
+    topicsContent.innerHTML = '<p class="hint">Загрузка хронологии...</p>';
+    try {
+        const resp = await fetch('/api/chronology?limit=50');
+        const data = await resp.json();
+        const events = data.events || [];
+        if (!events.length) {
+            topicsContent.innerHTML = '<p class="hint">События не найдены.</p>';
+            return;
+        }
+        let html = '<div class="chronology-list">';
+        events.forEach(e => {
+            html += `<div class="chronology-item"><span class="chrono-date">${e.year || ''}</span> ${e.event || ''}</div>`;
+        });
+        html += '</div>';
+        topicsContent.innerHTML = html;
+    } catch (e) {
+        topicsContent.innerHTML = '<p class="hint">Ошибка загрузки хронологии.</p>';
+    }
+}
+
+async function loadFigures() {
+    topicsContent.innerHTML = '<p class="hint">Загрузка личностей...</p>';
+    try {
+        const resp = await fetch('/api/figures?limit=50');
+        const data = await resp.json();
+        const figures = data.figures || [];
+        if (!figures.length) {
+            topicsContent.innerHTML = '<p class="hint">Личности не найдены.</p>';
+            return;
+        }
+        let html = '<div class="figure-list">';
+        figures.forEach(f => {
+            html += `<div class="figure-item"><strong>${f.name || ''}</strong> — ${f.description || ''}</div>`;
+        });
+        html += '</div>';
+        topicsContent.innerHTML = html;
+    } catch (e) {
+        topicsContent.innerHTML = '<p class="hint">Ошибка загрузки личностей.</p>';
+    }
+}
+
+async function loadTerms() {
+    topicsContent.innerHTML = '<p class="hint">Загрузка терминов...</p>';
+    try {
+        const resp = await fetch('/api/terms?limit=50');
+        const data = await resp.json();
+        const terms = data.terms || [];
+        if (!terms.length) {
+            topicsContent.innerHTML = '<p class="hint">Термины не найдены.</p>';
+            return;
+        }
+        let html = '<div class="term-list">';
+        terms.forEach(t => {
+            html += `<div class="term-item"><strong>${t.term || ''}</strong> — ${t.definition || ''}</div>`;
+        });
+        html += '</div>';
+        topicsContent.innerHTML = html;
+    } catch (e) {
+        topicsContent.innerHTML = '<p class="hint">Ошибка загрузки терминов.</p>';
+    }
+}
+
+document.getElementById('topics-btn').addEventListener('click', loadTopics);
+document.getElementById('chronology-btn').addEventListener('click', loadChronology);
+document.getElementById('figures-btn').addEventListener('click', loadFigures);
+document.getElementById('terms-btn').addEventListener('click', loadTerms);
+
+// ============================================================
 // Профиль
 // ============================================================
 async function loadProfile() {
     const content = document.getElementById('profile-content');
     try {
-        const resp = await fetch(`/api/profile?user_id=${userId}`);
+        const resp = await fetch(`/api/progress?user_id=${userId}`);
         const data = await resp.json();
-        const user = data.user || {};
-        const stats = data.stats || {};
+        const profile = data.profile || {};
+        const user = profile.user || {};
+        const stats = profile.stats || {};
+        const progress = data.progress || {};
         content.innerHTML = `
             <div class="profile-card">
                 <div class="profile-name">${user.first_name || 'Ученик'}</div>
-                <div class="profile-rank">${data.rank || 'Новичок'}</div>
+                <div class="profile-rank">${profile.rank || 'Новичок'}</div>
                 <div class="profile-stats">
                     <div class="stat"><span class="stat-value">${user.level || 1}</span><span class="stat-label">Уровень</span></div>
                     <div class="stat"><span class="stat-value">${user.xp || 0}</span><span class="stat-label">XP</span></div>
@@ -161,7 +302,7 @@ async function loadProfile() {
                 </div>
                 <div class="achievements">
                     <h3>🏆 Достижения</h3>
-                    ${data.achievements?.length ? data.achievements.map(a => `<div class="achievement">${a.title}</div>`).join('') : '<p class="hint">Пока нет достижений</p>'}
+                    ${profile.achievements?.length ? profile.achievements.map(a => `<div class="achievement">${a.title}</div>`).join('') : '<p class="hint">Пока нет достижений</p>'}
                 </div>
             </div>
         `;
