@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 KNOWLEDGE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "knowledge")
 CHUNKS_FILE = os.path.join(KNOWLEDGE_DIR, "chunks.json")
+# Кэш эмбеддингов (numpy .npy) — чтобы не пересчитывать при повторных запусках
+EMBEDDINGS_CACHE = os.path.join(KNOWLEDGE_DIR, "embeddings_cache.npy")
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "intfloat/multilingual-e5-large")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
@@ -123,8 +125,32 @@ def main():
 
     model = get_embedder()
     texts = [c["text"] for c in chunks]
-    logger.info(f"Генерация эмбеддингов для {len(texts)} текстов...")
-    embeddings = embed_texts(model, texts)
+
+    # Пытаемся загрузить эмбеддинги из кэша
+    embeddings = None
+    if os.path.exists(EMBEDDINGS_CACHE):
+        try:
+            import numpy as np
+            cached = np.load(EMBEDDINGS_CACHE)
+            if cached.shape[0] == len(texts):
+                embeddings = cached
+                logger.info(f"Эмбеддинги загружены из кэша: {embeddings.shape}")
+            else:
+                logger.warning(f"Кэш не совпадает по размеру ({cached.shape[0]} != {len(texts)}), пересчитываю")
+        except Exception as e:
+            logger.warning(f"Не удалось загрузить кэш эмбеддингов: {e}")
+
+    if embeddings is None:
+        logger.info(f"Генерация эмбеддингов для {len(texts)} текстов...")
+        embeddings = embed_texts(model, texts)
+        # Сохраняем в кэш
+        try:
+            import numpy as np
+            np.save(EMBEDDINGS_CACHE, embeddings)
+            logger.info(f"Эмбеддинги сохранены в кэш: {EMBEDDINGS_CACHE}")
+        except Exception as e:
+            logger.warning(f"Не удалось сохранить кэш эмбеддингов: {e}")
+
     dim = embeddings.shape[1]
     logger.info(f"Эмбеддинги готовы: {embeddings.shape}")
 

@@ -57,12 +57,22 @@ def search(query, top_k=5):
     # Для e5-моделей используем префикс "query:"
     query_embedding = model.encode([f"query: {query}"])[0]
 
+    # Совместимость с разными версиями qdrant-client:
+    # - старые версии используют client.search(query_vector=...)
+    # - новые (>=1.10) используют client.query_points(query=...)
+    if hasattr(client, "query_points"):
+        resp = client.query_points(
+            collection_name=QDRANT_COLLECTION,
+            query=query_embedding.tolist(),
+            limit=top_k,
+            with_payload=True,
+        )
+        return resp.points
     results = client.search(
         collection_name=QDRANT_COLLECTION,
         query_vector=query_embedding.tolist(),
         limit=top_k,
     )
-
     return results
 
 

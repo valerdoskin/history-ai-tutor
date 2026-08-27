@@ -36,6 +36,18 @@ def _get_context(topic, max_chars=4000):
     return rag_service.build_context(chunks, max_chars=max_chars)
 
 
+def _normalize_question(result):
+    """Нормализует ответ LLM в словарь задания.
+
+    LLM иногда возвращает JSON-массив вместо объекта — берём первый элемент.
+    """
+    if isinstance(result, list):
+        result = result[0] if result else {}
+    if not isinstance(result, dict):
+        return {}
+    return result
+
+
 def generate_oge_question(topic=None, qtype=None):
     """
     Генерирует задание ОГЭ.
@@ -63,7 +75,7 @@ def generate_oge_question(topic=None, qtype=None):
             ),
         },
     ]
-    return llm_service.call_llm(messages, json_mode=True, max_tokens=800)
+    return _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
 
 
 def generate_ege_question(topic=None, qtype=None):
@@ -92,11 +104,14 @@ def generate_ege_question(topic=None, qtype=None):
             ),
         },
     ]
-    return llm_service.call_llm(messages, json_mode=True, max_tokens=800)
+    return _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
 
 
 def check_oge_answer(question, user_answer, correct_index, options):
-    """Проверяет ответ на задание ОГЭ."""
+    """Проверяет ответ на задание ОГЭ.
+
+    Принимает user_answer как номер варианта (1-based), как в Web App и боте.
+    """
     try:
         user_idx = int(user_answer) - 1
         correct = user_idx == correct_index

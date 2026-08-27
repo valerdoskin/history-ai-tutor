@@ -30,6 +30,7 @@ from services import (
     analytics_service,
     exam_service,
     gamification_service,
+    knowledge_service,
     progress_service,
     tutor_service,
 )
@@ -362,6 +363,120 @@ def api_exam():
     except Exception as e:
         logger.error(f"Ошибка генерации задания: {e}")
         return jsonify({"error": "Не удалось сгенерировать задание"}), 500
+
+
+@app.route("/api/topics", methods=["GET"])
+def api_topics():
+    """API для Web App: список тем (глав) из базы знаний."""
+    try:
+        return jsonify({"topics": knowledge_service.get_topics()})
+    except Exception as e:
+        logger.error(f"Ошибка получения тем: {e}")
+        return jsonify({"error": "Не удалось получить темы"}), 500
+
+
+@app.route("/api/topic/<int:topic_id>", methods=["GET"])
+def api_topic(topic_id):
+    """API для Web App: детали темы по id."""
+    try:
+        topic = knowledge_service.get_topic(topic_id)
+        if not topic:
+            return jsonify({"error": "Тема не найдена"}), 404
+        return jsonify(topic)
+    except Exception as e:
+        logger.error(f"Ошибка получения темы: {e}")
+        return jsonify({"error": "Не удалось получить тему"}), 500
+
+
+@app.route("/api/chronology", methods=["GET"])
+def api_chronology():
+    """API для Web App: хронология (даты и события)."""
+    try:
+        limit = request.args.get("limit", default=200, type=int)
+        return jsonify({"events": knowledge_service.get_chronology(limit=limit)})
+    except Exception as e:
+        logger.error(f"Ошибка получения хронологии: {e}")
+        return jsonify({"error": "Не удалось получить хронологию"}), 500
+
+
+@app.route("/api/figures", methods=["GET"])
+def api_figures():
+    """API для Web App: исторические личности."""
+    try:
+        limit = request.args.get("limit", default=200, type=int)
+        return jsonify({"figures": knowledge_service.get_figures(limit=limit)})
+    except Exception as e:
+        logger.error(f"Ошибка получения личностей: {e}")
+        return jsonify({"error": "Не удалось получить личности"}), 500
+
+
+@app.route("/api/terms", methods=["GET"])
+def api_terms():
+    """API для Web App: термины с определениями."""
+    try:
+        limit = request.args.get("limit", default=300, type=int)
+        return jsonify({"terms": knowledge_service.get_terms(limit=limit)})
+    except Exception as e:
+        logger.error(f"Ошибка получения терминов: {e}")
+        return jsonify({"error": "Не удалось получить термины"}), 500
+
+
+@app.route("/api/exam/submit", methods=["POST"])
+def api_exam_submit():
+    """API для Web App: проверка ответа на задание ОГЭ/ЕГЭ."""
+    data = request.get_json() or {}
+    exam_type = data.get("type", "oge")
+    user_id = data.get("user_id")
+    question = data.get("question", {})
+    user_answer = data.get("answer")
+    if not question or user_answer is None:
+        return jsonify({"error": "question и answer обязательны"}), 400
+    try:
+        if exam_type == "ege":
+            correct_answer = question.get("correct_answer")
+            is_correct = exam_service.check_ege_answer(user_answer, correct_answer)
+        else:
+            correct_index = question.get("correct_index")
+            options = question.get("options", [])
+            correct_answer = options[correct_index] if 0 <= correct_index < len(options) else ""
+            is_correct = exam_service.check_oge_answer(
+                question, user_answer, correct_index, options
+            )
+        result = {"correct": bool(is_correct)}
+        if user_id:
+            uid = int(user_id)
+            progress_service.record_activity(uid)
+            db.add_exam_result(
+                uid,
+                exam_type,
+                question.get("question", ""),
+                user_answer,
+                correct_answer,
+                int(is_correct),
+                question.get("topic", ""),
+            )
+            if result["correct"]:
+                progress_service.add_xp(uid, config.XP_PER_QUESTION)
+                gamification_service.award_xp(uid, config.XP_PER_QUESTION)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Ошибка проверки ответа: {e}")
+        return jsonify({"error": "Не удалось проверить ответ"}), 500
+
+
+@app.route("/api/progress", methods=["GET"])
+def api_progress():
+    """API для Web App: прогресс пользователя."""
+    user_id = request.args.get("user_id")
+    if not user_id:
+        return jsonify({"error": "user_id required"}), 400
+    try:
+        summary = progress_service.get_progress_summary(int(user_id))
+        profile = gamification_service.get_profile(int(user_id))
+        return jsonify({"progress": summary, "profile": profile})
+    except Exception as e:
+        logger.error(f"Ошибка получения прогресса: {e}")
+        return jsonify({"error": "Не удалось получить прогресс"}), 500
 
 
 @app.route("/api/health")
