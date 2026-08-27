@@ -1,0 +1,176 @@
+"""
+Тесты для сервисов приложения History AI Tutor.
+Запуск: python3 test_services.py
+"""
+
+import os
+import sys
+import tempfile
+import unittest
+
+# Используем временную БД для тестов
+os.environ["DB_PATH"] = "/tmp/test_tutor_services.db"
+
+import config
+from database import Database, db
+
+
+class TestDatabase(unittest.TestCase):
+    def setUp(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+        self.db = Database(db_path="/tmp/test_tutor_services.db")
+
+    def tearDown(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+
+    def test_get_or_create_user(self):
+        user = self.db.get_or_create_user(1, "test", "Тест")
+        self.assertEqual(user["user_id"], 1)
+        self.assertEqual(user["username"], "test")
+        self.assertEqual(user["level"], 1)
+        self.assertEqual(user["xp"], 0)
+
+    def test_add_xp(self):
+        self.db.get_or_create_user(1)
+        level = self.db.add_xp(1, 100)
+        self.assertEqual(level, 2)
+        user = self.db.get_or_create_user(1)
+        self.assertEqual(user["xp"], 100)
+
+    def test_update_progress(self):
+        self.db.get_or_create_user(1)
+        self.db.update_progress(1, "book1", "1", "Параграф 1", "completed", 100)
+        progress = self.db.get_progress(1)
+        self.assertEqual(len(progress), 1)
+        self.assertEqual(progress[0]["status"], "completed")
+
+    def test_unlock_achievement(self):
+        self.db.get_or_create_user(1)
+        self.db.unlock_achievement(1, "first_lesson")
+        achievements = self.db.get_achievements(1)
+        self.assertIn("first_lesson", achievements)
+
+    def test_add_message(self):
+        self.db.get_or_create_user(1)
+        self.db.add_message(1, "user", "Привет")
+        self.db.add_message(1, "assistant", "Здравствуй!")
+        history = self.db.get_history(1)
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["role"], "user")
+
+    def test_add_exam_result(self):
+        self.db.get_or_create_user(1)
+        self.db.add_exam_result(1, "oge", "Вопрос?", "Ответ", "Правильный", 0, "Тема 1")
+        weak = self.db.get_weak_topics(1)
+        self.assertEqual(len(weak), 1)
+        self.assertEqual(weak[0]["topic"], "Тема 1")
+
+    def test_get_stats(self):
+        self.db.get_or_create_user(1)
+        self.db.add_exam_result(1, "oge", "Вопрос?", "Ответ", "Правильный", 0, "Тема 1")
+        stats = self.db.get_stats(1)
+        self.assertEqual(stats["total_questions"], 1)
+        self.assertEqual(stats["correct_questions"], 0)
+
+
+class TestGamification(unittest.TestCase):
+    def setUp(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+        self.db = Database(db_path="/tmp/test_tutor_services.db")
+        self.db.get_or_create_user(1)
+
+    def tearDown(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+
+    def test_get_rank(self):
+        from services import gamification_service
+        self.assertEqual(gamification_service.get_rank(1), "Новичок")
+        self.assertEqual(gamification_service.get_rank(3), "Ученик")
+        self.assertEqual(gamification_service.get_rank(5), "Знаток")
+        self.assertEqual(gamification_service.get_rank(8), "Эксперт")
+        self.assertEqual(gamification_service.get_rank(12), "Мастер истории")
+        self.assertEqual(gamification_service.get_rank(16), "Легенда")
+
+    def test_award_xp(self):
+        from services import gamification_service
+        level = gamification_service.award_xp(1, 100)
+        self.assertEqual(level, 2)
+
+
+class TestAdaptive(unittest.TestCase):
+    def setUp(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+        self.db = Database(db_path="/tmp/test_tutor_services.db")
+        self.db.get_or_create_user(1)
+
+    def tearDown(self):
+        if os.path.exists("/tmp/test_tutor_services.db"):
+            os.remove("/tmp/test_tutor_services.db")
+
+    def test_estimate_level_new_user(self):
+        from services import adaptive_service
+        level = adaptive_service.estimate_level(1)
+        self.assertEqual(level, 1)
+
+    def test_get_difficulty(self):
+        from services import adaptive_service
+        diff = adaptive_service.get_difficulty(1)
+        self.assertEqual(diff, "easy")
+
+    def test_personalize_prompt(self):
+        from services import adaptive_service
+        prompt = adaptive_service.personalize_prompt(1)
+        self.assertIn("Уровень ученика", prompt)
+
+
+class TestRAGBuildContext(unittest.TestCase):
+    def test_build_context(self):
+        from services import rag_service
+        chunks = [
+            {"text": "Текст чанка 1", "book": "Книга 1", "chapter": "Глава 1", "paragraph": "Параграф 1"},
+            {"text": "Текст чанка 2", "book": "Книга 1", "chapter": "Глава 1", "paragraph": "Параграф 2"},
+        ]
+        context = rag_service.build_context(chunks)
+        self.assertIn("Чанк 1", context)
+        self.assertIn("Книга 1", context)
+        self.assertIn("Текст чанка 1", context)
+
+    def test_build_context_max_chars(self):
+        from services import rag_service
+        chunks = [
+            {"text": "A" * 5000, "book": "Книга 1"},
+            {"text": "B" * 5000, "book": "Книга 2"},
+        ]
+        context = rag_service.build_context(chunks, max_chars=6000)
+        self.assertLess(len(context), 6000)
+
+
+class TestExamService(unittest.TestCase):
+    def test_check_oge_answer(self):
+        from services import exam_service
+        options = ["А", "Б", "В", "Г"]
+        self.assertTrue(exam_service.check_oge_answer("Вопрос", "2", 1, options))
+        self.assertFalse(exam_service.check_oge_answer("Вопрос", "1", 1, options))
+
+    def test_check_ege_answer(self):
+        from services import exam_service
+        self.assertTrue(exam_service.check_ege_answer("Иван Грозный", "иван грозный"))
+        self.assertFalse(exam_service.check_ege_answer("Пётр", "Иван"))
+
+
+class TestTutorService(unittest.TestCase):
+    def test_check_answer(self):
+        from services import tutor_service
+        result = tutor_service.check_answer("Вопрос", "Ответ", "Ответ", "Пояснение")
+        self.assertTrue(result["correct"])
+        result = tutor_service.check_answer("Вопрос", "Неверно", "Ответ", "Пояснение")
+        self.assertFalse(result["correct"])
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

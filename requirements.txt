@@ -1,0 +1,20 @@
+# History AI Tutor — зависимости
+# Установка: pip install -r requirements.txt
+
+# Парсинг учебников
+python-docx>=1.1.0        # Извлечение текста и форматирования из DOCX (основной парсер)
+pdfplumber>=0.11.0        # Извлечение текста и форматирования из PDF (fallback)
+pymupdf>=1.24.0           # Дополнительная обработка PDF (резервный парсер)
+
+# Веб-приложение и Telegram-бот
+flask>=3.0.0
+python-telegram-bot>=21.0.0
+requests>=2.31.0
+
+# Конфигурация
+python-dotenv>=1.0.0
+
+# Эмбеддинги и векторная БД
+sentence-transformers>=3.0.0
+qdrant-client>=1.9.0
+torch>=2.0.0

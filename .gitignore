@@ -1,0 +1,43 @@
+# Секреты
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Виртуальные окружения
+venv/
+.venv/
+env/
+
+# Базы данных
+*.db
+*.sqlite
+*.sqlite3
+
+# Векторная БД Qdrant
+knowledge/qdrant/
+
+# Кэш моделей
+.cache/
+models/
+
+# Логи
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Временные файлы
+tmp/
+temp/

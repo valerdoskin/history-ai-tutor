@@ -1,0 +1,953 @@
+{
+  "world_history::I::§\tДревнейшие люди": {
+    "status": "ok"
+  },
+  "world_history::I::§\tПервобытные охотники и собиратели": {
+    "status": "ok"
+  },
+  "world_history::I::§\tВерования и искусство": {
+    "status": "ok"
+  },
+  "world_history::I::§\tВозникновение земледелия, скотоводства и ремесла": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВозникновение": {
+    "status": "ok"
+  },
+  "world_history::II::§\tОбщество Древнего Египта": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРасцвет Древнеегипетского государства": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРелигия Древнего Египта": {
+    "status": "ok"
+  },
+  "world_history::II::§\tНаука и искусство в Древнем Египте": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВозникновение первых государств в Древнем Междуречье": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВавилонское царство": {
+    "status": "ok"
+  },
+  "world_history::II::§\tФиникия": {
+    "status": "ok"
+  },
+  "world_history::II::§\tДревняя Палестина": {
+    "status": "ok"
+  },
+  "world_history::II::§\tАссирийская держава": {
+    "status": "ok"
+  },
+  "world_history::II::§\tПерсидское царство": {
+    "status": "ok"
+  },
+  "world_history::II::§\tДревняя Индия": {
+    "status": "ok"
+  },
+  "world_history::II::§\tДревний Китай": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРелигия и культура Древней Индии и Древнего Китая": {
+    "status": "ok"
+  },
+  "world_history::III::§\tНачало греческой цивилизации": {
+    "status": "ok"
+  },
+  "world_history::III::§\tПоэмы Гомера": {
+    "status": "ok"
+  },
+  "world_history::III::§\tГосударство-полис в Древней Греции": {
+    "status": "ok"
+  },
+  "world_history::III::§\tВеликая греческая колонизация": {
+    "status": "ok"
+  },
+  "world_history::III::§\tСеверное Причерноморье": {
+    "status": "ok"
+  },
+  "world_history::III::§\tДревние Афины": {
+    "status": "ok"
+  },
+  "world_history::III::§\tДревняя Спарта": {
+    "status": "ok"
+  },
+  "world_history::III::§\tГреко-персидские  войны": {
+    "status": "ok"
+  },
+  "world_history::III::§ 29 Афинская демократия": {
+    "status": "ok"
+  },
+  "world_history::III::§\tКультура Древней Греции": {
+    "status": "ok"
+  },
+  "world_history::III::§\tПовседневная жизнь древних греков": {
+    "status": "ok"
+  },
+  "world_history::III::§\tНаука в Древней Греции": {
+    "status": "ok"
+  },
+  "world_history::III::§\tТеатр в жизни древних греков": {
+    "status": "ok"
+  },
+  "world_history::III::§\tСвященный огонь Олимпии": {
+    "status": "ok"
+  },
+  "world_history::III::§\tОслабление Эллады.": {
+    "status": "ok"
+  },
+  "world_history::III::§\tПоходы Александра Македонского на Восток": {
+    "status": "ok"
+  },
+  "world_history::III::§\tКультура царства Птолемеев": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tНачало римской истории": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tСемь римских царей": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tУстановление республики": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tНравы, обычаи, религия": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tЗавоевание Римом Италии": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tПунические  войны": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tЗавоевание  Восточного  Средиземноморья": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tГражданские войны": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tРабство в Риме": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tРимское государство в I веке до н. э.": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tРимская империя": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tДинастии римских императоров": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tВозникновение христианства": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tНаука и культура Древнего Рима": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tБыт и досуг римлян": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tПоздняя империя": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 1\tВеликое переселение народов. Восточная европа и Северная Азия в 1-м тыс. н. э.": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tВосточные славяне и их соседи": {
+    "status": "ok"
+  },
+  "russia_history::I::§  4\tначало династии Рюриковичей": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРусь при игоре, Ольге, Святославе": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРусь при Владимире Святом": {
+    "status": "ok"
+  },
+  "russia_history::I::§  9\tРасцвет Руси при Ярославе Мудром": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tнаследники Ярослава Мудрого": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 12 Русь при Владимире Мономахе": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 13 Распад государства Русь": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tВладимиро-Суздальская  земля": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tновгородская земля": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 18 Юго-Западная  Русь": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tКультура и повседневность Руси в IX—XIII вв.": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 21 Чингисхан и его империя": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tнатиск на русские земли с востока": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tОтражение агрессии с запада": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tРусские земли и Золотая Орда": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tРусь и Великое княжество Литовское": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 30 Северо-Восточная Русь в конце XIII — начале XIV в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 31 Возвышение Москвы": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 32 Победа на Куликовом поле": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tМосковское княжество в конце XIV — первой половине XV в.": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tиван III — государь всея Руси": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tРоссийское государство и общество во второй половине XV в.": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tПравление Василия III": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tКультура в XIII — первой трети XVI в.": {
+    "status": "ok"
+  },
+  "world_history::I::§ 1\tот древности к средневековью:": {
+    "status": "ok"
+  },
+  "world_history::I::§ 2\tВизантийская империя и её соседи": {
+    "status": "ok"
+  },
+  "world_history::I::§ 3\tот королевства Хлодвига": {
+    "status": "ok"
+  },
+  "world_history::I::§ 4\tевропа в IX—XI вв.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 5\tВозникновение ислама и государства у арабов": {
+    "status": "ok"
+  },
+  "world_history::II::§ 6\tАрабский халифат, его расцвет и распад": {
+    "status": "ok"
+  },
+  "world_history::III::§ 7\tсеньоры и вассалы": {
+    "status": "ok"
+  },
+  "world_history::III::§ 8\tкатолическая Церковь и духовенство": {
+    "status": "ok"
+  },
+  "world_history::III::§ 9\tкрестьяне и горожане": {
+    "status": "ok"
+  },
+  "world_history::IV::крестовые походы": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tАнглия, Франция и государства пиренейского полуострова в XI — начале XIV в.": {
+    "status": "ok"
+  },
+  "world_history::IV::священная римская империя и её соседи": {
+    "status": "ok"
+  },
+  "world_history::IV::Западноевропейская культура в XI—XIV вв.": {
+    "status": "ok"
+  },
+  "world_history::V::кочевники Великой степи": {
+    "status": "ok"
+  },
+  "world_history::V::§\tкитай и Япония в средние века": {
+    "status": "ok"
+  },
+  "world_history::V::индия в средние века": {
+    "status": "ok"
+  },
+  "world_history::V::народы и государства Африки": {
+    "status": "ok"
+  },
+  "world_history::V::Цивилизации доколумбовой Америки": {
+    "status": "ok"
+  },
+  "world_history::VI::§\tевропа в XIV —": {
+    "status": "ok"
+  },
+  "world_history::VI::Гибель Византии и возникновение османской империи": {
+    "status": "ok"
+  },
+  "world_history::VI::европа на пороге нового времени": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРоссия в 1533—1547 гг.": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tНачало царствования Ивана IV": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРусское общество в XVI в.": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tВоенные реформы Ивана IV и Избранной рады": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tНаследники Золотой Орды в середине XVI в.": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tПрисоединение Поволжья. Начало Ливонской войны": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tПадение Избранной рады и введение опричнины": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tЗавершение эпохи Ивана Грозного": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРоссия при царе Фёдоре Ивановиче": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 18 Развитие культуры в XVI в.": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 19 Духовная жизнь общества в XVI в.": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tВ преддверии грозных испытаний: кризис власти и общества на рубеже XVI–XVII вв.": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tНачало Смуты. Самозванец на троне": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tАпогей Смуты. «Всеконечное разорение»": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tСпасители Отечества": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tЗавершение Смуты": {
+    "status": "ok"
+  },
+  "russia_history::III::§\t«Куда соха ходила…»": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tСословия в XVII в.: верхи общества": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tСословия в XVII в.: низы общества": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tГосударственное устройство России в XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tВнутренняя политика царя Алексея Михайловича": {
+    "status": "ok"
+  },
+  "russia_history::III::§\t«Государство правит по своей воли…» На путях к абсолютной монархии": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tРусская церковь в XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tСоциальное противостояние в XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tВнешняя политика России в XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\t«Встречь солнцу»: освоение Сибири и Дальнего Востока": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tВнутренняя политика": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tКультура России в XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tМир человека XVII в.": {
+    "status": "ok"
+  },
+  "world_history::I::§\tМир на заре нового времени": {
+    "status": "ok"
+  },
+  "world_history::I::§\tВеликие географические открытия": {
+    "status": "ok"
+  },
+  "world_history::I::§\tКолониальные империи раннего нового времени": {
+    "status": "ok"
+  },
+  "world_history::II::§\tСельский и городской мир": {
+    "status": "ok"
+  },
+  "world_history::II::§\tЧеловек, общество, государство": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРеформация и Контрреформация": {
+    "status": "ok"
+  },
+  "world_history::II::§\tГерманские  земли": {
+    "status": "ok"
+  },
+  "world_history::II::§\tиспанская монархия": {
+    "status": "ok"
+  },
+  "world_history::II::§\tнидерланды: путь к расцвету": {
+    "status": "ok"
+  },
+  "world_history::II::§\tФранция: становление абсолютизма": {
+    "status": "ok"
+  },
+  "world_history::II::§\tАнглия в XVI — начале XVII в.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВек революций в Англии": {
+    "status": "ok"
+  },
+  "world_history::II::§\tСила и слабость Речи Посполитой": {
+    "status": "ok"
+  },
+  "world_history::II::§\tМеждународные отношения в XVI—XVII вв.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tКультура эпохи Возрождения": {
+    "status": "ok"
+  },
+  "world_history::II::§\tКультура XVII в.: барокко и классицизм": {
+    "status": "ok"
+  },
+  "world_history::II::§\tнаучная революция": {
+    "status": "ok"
+  },
+  "world_history::III::§\tОсманская империя и иран: могущество и упадок": {
+    "status": "ok"
+  },
+  "world_history::III::§\tиндия в эпоху Великих Моголов": {
+    "status": "ok"
+  },
+  "world_history::III::§\tКитай и Япония: в поисках стабильности": {
+    "status": "ok"
+  },
+  "world_history::III::§\tАфрика: разные судьбы государств и народов": {
+    "status": "ok"
+  },
+  "world_history::III::D": {
+    "status": "ok"
+  },
+  "world_history::I::§\tПреображение Европы": {
+    "status": "ok"
+  },
+  "world_history::I::§\tЭпоха Просвещения": {
+    "status": "ok"
+  },
+  "world_history::I::§\tОбщество Старого порядка": {
+    "status": "ok"
+  },
+  "world_history::I::§\tГосударство Старого порядка": {
+    "status": "ok"
+  },
+  "world_history::I::§\tВ поисках европейского равновесия": {
+    "status": "ok"
+  },
+  "world_history::I::§\tУспешные и безуспешные реформы французских королей": {
+    "status": "ok"
+  },
+  "world_history::I::§\tПовседневная жизнь европейцев: старое и новое": {
+    "status": "ok"
+  },
+  "world_history::I::§\tНаука, образование, воспитание": {
+    "status": "ok"
+  },
+  "world_history::I::§\tКультурное пространство Европы": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВеликобритания: промышленная революция": {
+    "status": "ok"
+  },
+  "world_history::II::§\tБританские колонии против метрополии.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tФранцузская революция: конец Старого порядка и установление республики": {
+    "status": "ok"
+  },
+  "world_history::II::§\tФранцузская республика: диктатура и террор": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРеволюционная Франция против Европы": {
+    "status": "ok"
+  },
+  "world_history::II::§\tЗавершение Французской революции и её итоги": {
+    "status": "ok"
+  },
+  "world_history::II::§\tИмперия Наполеона Бонапарта: от триумфа до краха": {
+    "status": "ok"
+  },
+  "world_history::III::§\tВокруг света во времена капитана Кука": {
+    "status": "ok"
+  },
+  "world_history::III::§\tОсманская империя и Иран": {
+    "status": "ok"
+  },
+  "world_history::III::§\tИндия: утрата независимости": {
+    "status": "ok"
+  },
+  "world_history::III::§\tКитай и Япония: закрываясь от Запада": {
+    "status": "ok"
+  },
+  "world_history::III::§\tЛатинская Америка: путь к независимости": {
+    "status": "ok"
+  },
+  "world_history::III::§\tАфрика во времена расцвета работорговли": {
+    "status": "ok"
+  },
+  "world_history::I::§\tЭкономика делает решающий рывок": {
+    "status": "ok"
+  },
+  "world_history::I::§\tОбщество в движении": {
+    "status": "ok"
+  },
+  "world_history::I::§\t«Великие идеологии»": {
+    "status": "ok"
+  },
+  "world_history::I::§\tПутём реформ: государство, парламенты, партии": {
+    "status": "ok"
+  },
+  "world_history::I::§\tНаука и образование в XIX в.: сила, менявшая мир": {
+    "status": "ok"
+  },
+  "world_history::I::§\tВек художественных исканий": {
+    "status": "ok"
+  },
+  "world_history::I::§\tМеждународные отношения в XIX в.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tВеликобритания: экономическое лидерство и политические реформы": {
+    "status": "ok"
+  },
+  "world_history::II::§\tФранция и Южная Европа: путями революций": {
+    "status": "ok"
+  },
+  "world_history::II::§\tОт Балтики до Адриатики: время": {
+    "status": "ok"
+  },
+  "world_history::II::§\tЦентральная и Юго-Восточная Европа: империи и нации": {
+    "status": "ok"
+  },
+  "world_history::II::§\tСША: «дом, расколотый надвое»": {
+    "status": "ok"
+  },
+  "world_history::III::§\tВеликобритания: «мастерская мира» сдаёт позиции": {
+    "status": "ok"
+  },
+  "world_history::III::§\tФранция: Вторая империя и Третья республика": {
+    "status": "ok"
+  },
+  "world_history::III::§\tГермания: от «железа и крови» к «месту под солнцем»": {
+    "status": "ok"
+  },
+  "world_history::III::§\tИталия: «запоздавшая нация»": {
+    "status": "ok"
+  },
+  "world_history::III::§\tАвстро-Венгрия и Балканы: национальные противоречия и компромиссы": {
+    "status": "ok"
+  },
+  "world_history::III::§\tСША: «позолоченный век»": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tОсманская империя и Иран: на осколках былого величия": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tИндия и Афганистан: подчинение и борьба": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tКитай и Япония: разные ответы на вызовы модернизации": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tАфрика в XIX в.: захваты и эксплуатация": {
+    "status": "ok"
+  },
+  "world_history::IV::§\tЛатинская Америка:": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 1\tРоссия и мир накануне Первой мировой войны": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 2\tРоссийская армия на фронтах Первой мировой войны": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 3\tВласть, экономика и общество в годы Первой мировой войны. Нарастание революционных настроений": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 4\tВеликая российская революция: Февраль 1917 г.": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 5\tВеликая российская революция: Октябрь 1917 г.": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 6\tПервые революционные преобразования большевиков": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 7\tэкономическая политика советской власти. «Военный коммунизм»": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 8\tГражданская война: истоки и основные участники": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 9\tНа фронтах Гражданской войны": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 10 Революция и Гражданская война на национальных окраинах": {
+    "status": "ok"
+  },
+  "russia_history::I::ВОПРОСЫ И ЗАДАНИЯ К ГЛАВЕ": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 13 экономический и политический кризис начала 1920-х гг. Переход к нэпу": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 14 экономическое и социальное развитие в годы нэпа": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 15 Образование СССР. Национальная политика в 1920-е гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 16 Политическое развитие в 1920-е гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 17 Международное положение и внешняя политика СССР в 1920-е гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 18 Культурное пространство советского общества в 1920-е гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 19 «Великий перелом». Индустриализация": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 20 Коллективизация сельского хозяйства": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 21 Политическая система и национальная политика СССР в 1930-е гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 24 Советское искусство 1930-х гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 25—26": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 27 СССР и мировое сообщество в 1929—1939 гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§ 28 СССР накануне Великой Отечественной войны": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 29 Начало Великой Отечественной войны": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 30 Битва за Москву и блокада Ленинграда": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 31 Фронт за линией фронта": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 32 Единство фронта и тыла": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 33 Сталинградская битва. Начало коренного перелома  в ходе войны": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 34 Курская битва. Завершение коренного перелома": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 35 «Десять сталинских ударов» и изгнание врага с территории СССР": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 36 Наука и культура в годы войны": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 37—38": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 39—40": {
+    "status": "ok"
+  },
+  "russia_history::III::ОГЛАВЛЕНИЕ": {
+    "status": "ok"
+  },
+  "world_history::I::§  1\tМир накануне Первой мировой войны": {
+    "status": "ok"
+  },
+  "world_history::I::МИР\tРОССИЯ": {
+    "status": "ok"
+  },
+  "world_history::I::§ 2\tПервая мировая война. 1914—1918 гг.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 3\tРаспад империй и образование": {
+    "status": "ok"
+  },
+  "world_history::II::МИР\tРОССИЯ": {
+    "status": "ok"
+  },
+  "world_history::II::§ 4\tВерсальско-Вашингтонская система международных отношений": {
+    "status": "ok"
+  },
+  "world_history::II::§ 5\tСтраны Европы и Северной Америки в 1920-е гг.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 6\tИтальянский фашизм.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 7\tВеликая депрессия.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 8\tГерманский нацизм. Нарастание агрессии в мире": {
+    "status": "ok"
+  },
+  "world_history::II::§ 9\tРост международной напряжённости в 1930-е гг.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tСтраны Азии, Африки и Латинской Америки в 1918—1930-е гг.": {
+    "status": "ok"
+  },
+  "world_history::II::§ 12 Международные отношения в 1930-е гг.": {
+    "status": "ok"
+  },
+  "world_history::II::§\tРазвитие науки и культуры в 1914—1930-х гг.": {
+    "status": "ok"
+  },
+  "world_history::III::§ 15 Начальный период Второй мировой войны": {
+    "status": "ok"
+  },
+  "world_history::III::МИР\tРОССИЯ": {
+    "status": "ok"
+  },
+  "world_history::III::§ 16 1941 год. Начало Великой Отечественной войны и войны на Тихом океане": {
+    "status": "ok"
+  },
+  "world_history::III::§ 17 Коренной перелом во Второй мировой войне": {
+    "status": "ok"
+  },
+  "world_history::III::МИР": {
+    "status": "ok"
+  },
+  "world_history::III::РОССИЯ": {
+    "status": "ok"
+  },
+  "world_history::III::§ 18 Разгром Германии, Японии и их союзников": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tБорьба за власть в конце XVII в.": {
+    "status": "ok"
+  },
+  "russia_history::I::§  3\tПётр I: становление реформатора": {
+    "status": "ok"
+  },
+  "russia_history::I::§  4\tНачало Петровских преобразований": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tСеверная война: от Нарвы до Полтавы": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tСеверная война: «Полтавская виктория»": {
+    "status": "ok"
+  },
+  "russia_history::I::§  9\tСеверная война:": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 10 Строительство империи:": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tПарад реформ:": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 13 Цена реформ": {
+    "status": "ok"
+  },
+  "russia_history::I::§ 14 Общество и государство в период реформ": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tПетербург в первой четверти ХVIII в.": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tПреображённая Россия": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tЭпоха дворцовых переворотов (1725—1762)": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tПо заветам Петра Великого": {
+    "status": "ok"
+  },
+  "russia_history::III::§\t«Законная монархия» Екатерины II": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tКто и как присоединялся к России": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tЭкономика России во второй половине XVIII в.: хозяйство империи": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tОбщество века реформ:": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tСоциальный протест": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tВнешняя политика Екатерины II: южное и восточное направления": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tНачало освоения Новороссии и Крыма": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 37 Внешняя политика Екатерины II: западное направление": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 38 «Непросвещённый абсолютизм»: внутренняя политика Павла I": {
+    "status": "ok"
+  },
+  "russia_history::III::§ 39 Внешняя политика Павла I": {
+    "status": "ok"
+  },
+  "russia_history::III::§\t«Государство при армии»:": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tПублицистика, литература, театр": {
+    "status": "ok"
+  },
+  "russia_history::IV::§ 43 Развитие образования": {
+    "status": "ok"
+  },
+  "russia_history::IV::§ 44 Развитие науки и техники": {
+    "status": "ok"
+  },
+  "russia_history::IV::§ 45 Архитектура и искусство": {
+    "status": "ok"
+  },
+  "russia_history::V::§ 46 Первые мероприятия нового императора": {
+    "status": "ok"
+  },
+  "russia_history::V::§\tВнешняя политика России в 1801—1811 гг.": {
+    "status": "ok"
+  },
+  "russia_history::V::§\t«Недаром помнит вся Россия…»": {
+    "status": "ok"
+  },
+  "russia_history::V::§ 51 Заграничные походы русской армии. Венский конгресс": {
+    "status": "ok"
+  },
+  "russia_history::V::§ 52 Либеральные и консервативные тенденции в политике": {
+    "status": "ok"
+  },
+  "russia_history::V::§\tОбщественное движение в первой": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tРеформаторские и консервативные тенденции в политике Николая I": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tСоциально-экономические мероприятия правительства Николая I": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tНациональная политика": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tКавказская  война": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tВнешняя политика России в 1825—1852 гг.": {
+    "status": "ok"
+  },
+  "russia_history::I::§  6–7  Крымская война (1853—1856)": {
+    "status": "ok"
+  },
+  "russia_history::I::§\tОбщественная жизнь России в 1830—1850-х гг.": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tИзменения в быту в первой половине XIX в.": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tПросвещение и наука": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tЛитература и публицистика": {
+    "status": "ok"
+  },
+  "russia_history::II::§\tАрхитектура и искусство": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tПредпосылки и разработка реформ в России": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tКрестьянская реформа 1861 г., её значение и последствия": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tСоциально-экономическое развитие страны в пореформенный период": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tРеформы 1860—1870-х гг.": {
+    "status": "ok"
+  },
+  "russia_history::III::§\tВнешняя политика Александра II. Русско- турецкая война 1877—1878 гг.": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\t«Народное самодержавие» Александра III": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tПеремены в экономике и социальном строе": {
+    "status": "ok"
+  },
+  "russia_history::IV::§\tВнешняя политика Александра III": {
+    "status": "ok"
+  },
+  "russia_history::V::§\tДостижения российской науки и образования": {
+    "status": "ok"
+  },
+  "russia_history::V::§\tРусская культура второй половины XIX в. и её общественное значение": {
+    "status": "ok"
+  },
+  "russia_history::V::§\tТехнический прогресс и перемены": {
+    "status": "ok"
+  },
+  "russia_history::VI::§\tВзаимодействие народов и национальных культур": {
+    "status": "ok"
+  },
+  "russia_history::VII::§\tОбщественная жизнь в 1860—1890-х гг.": {
+    "status": "ok"
+  },
+  "russia_history::VII::§\tИдейные течения и общественное движение": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tРоссия и мир на рубеже XIX—XX вв.: динамика развития и противоречия": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§ Николай II: начало правления. Политическое развитие страны в 1894—1904 гг.": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tВнешняя политика Николая II.": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tПервая российская революция": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tСоциально-экономические реформы П. Столыпина": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tРазвитие науки и народного просвещения": {
+    "status": "ok"
+  },
+  "russia_history::VIII::§\tСеребряный век российской культуры.": {
+    "status": "ok"
+  }
+}

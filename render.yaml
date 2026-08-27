@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: history-ai-tutor
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python index.py
+    healthCheckPath: /api/health
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: WEBHOOK_DOMAIN
+        sync: false
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: QDRANT_PATH
+        value: ./knowledge/qdrant
+      - key: EMBEDDING_MODEL
+        value: intfloat/multilingual-e5-large

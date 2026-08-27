@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History AI Tutor</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="/static/webapp.css">
+</head>
+<body>
+    <div class="app">
+        <header class="header">
+            <h1>📚 History AI Tutor</h1>
+            <p class="subtitle">ИИ-репетитор по истории для ОГЭ и ЕГЭ</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="chat">💬 Чат</button>
+            <button class="tab" data-tab="practice">📝 Практика</button>
+            <button class="tab" data-tab="profile">👤 Профиль</button>
+        </nav>
+
+        <!-- Чат -->
+        <section id="tab-chat" class="tab-content active">
+            <div id="chat-messages" class="chat-messages">
+                <div class="message bot">
+                    <div class="bubble">Привет! Я ИИ-репетитор по истории. Задай мне любой вопрос по истории России или всемирной истории! 🏛️</div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="Задай вопрос по истории..." autocomplete="off">
+                <button id="send-btn">➤</button>
+            </div>
+        </section>
+
+        <!-- Практика -->
+        <section id="tab-practice" class="tab-content">
+            <div class="practice-controls">
+                <select id="exam-type">
+                    <option value="oge">ОГЭ</option>
+                    <option value="ege">ЕГЭ</option>
+                </select>
+                <button id="practice-btn" class="btn-primary">Начать практику</button>
+            </div>
+            <div id="practice-content" class="practice-content">
+                <p class="hint">Выбери формат экзамена и начни практику!</p>
+            </div>
+        </section>
+
+        <!-- Профиль -->
+        <section id="tab-profile" class="tab-content">
+            <div id="profile-content" class="profile-content">
+                <p class="hint">Загрузка профиля...</p>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/webapp.js"></script>
+</body>
+</html>

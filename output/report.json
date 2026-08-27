@@ -1,0 +1,106 @@
+{
+  "total_files": 11,
+  "ok": 11,
+  "errors": 0,
+  "results": [
+    {
+      "file": "5_klass_Istoriya_Drevnego_mira_.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 4,
+      "total_paragraphs": 51,
+      "output_file": "output/5_klass_Istoriya_Drevnego_mira_.json"
+    },
+    {
+      "file": "6_klass._Istoriya_Rossii.docx",
+      "config": "config_russia_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 4,
+      "total_paragraphs": 26,
+      "output_file": "output/6_klass._Istoriya_Rossii.json"
+    },
+    {
+      "file": "6_klass_Vseobschaya_istoriya_.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 6,
+      "total_paragraphs": 21,
+      "output_file": "output/6_klass_Vseobschaya_istoriya_.json"
+    },
+    {
+      "file": "7_klass_._Istoriya_Rossii.docx",
+      "config": "config_russia_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 3,
+      "total_paragraphs": 29,
+      "output_file": "output/7_klass_._Istoriya_Rossii.json"
+    },
+    {
+      "file": "7_klass_Vseobschaya_istoriya_.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 3,
+      "total_paragraphs": 23,
+      "output_file": "output/7_klass_Vseobschaya_istoriya_.json"
+    },
+    {
+      "file": "8_klass_Vseobschaya_istoriya_.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 3,
+      "total_paragraphs": 22,
+      "output_file": "output/8_klass_Vseobschaya_istoriya_.json"
+    },
+    {
+      "file": "9_klass_Vseobschaya_istoriya_.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 4,
+      "total_paragraphs": 23,
+      "output_file": "output/9_klass_Vseobschaya_istoriya_.json"
+    },
+    {
+      "file": "Istoriya_Rossii_10kl_2023.docx",
+      "config": "config_russia_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 3,
+      "total_paragraphs": 35,
+      "output_file": "output/Istoriya_Rossii_10kl_2023.json"
+    },
+    {
+      "file": "Vseobschaya_10.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 3,
+      "total_paragraphs": 33,
+      "output_file": "output/Vseobschaya_10.json"
+    },
+    {
+      "file": "Za_8_klass.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 5,
+      "total_paragraphs": 35,
+      "output_file": "output/Za_8_klass.json"
+    },
+    {
+      "file": "Za_9_klass.docx",
+      "config": "config_world_history.json",
+      "format": "docx",
+      "status": "ok",
+      "total_chapters": 8,
+      "total_paragraphs": 32,
+      "output_file": "output/Za_9_klass.json"
+    }
+  ]
+}

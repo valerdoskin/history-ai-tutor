@@ -1,0 +1,63 @@
+{
+  "book_id": "russia_history",
+  "book_line": "История России",
+  "description": "Конфигурация для учебников по истории России (6-10 классы)",
+  "structure": {
+    "chapter": "^\\s*Г\\s*Л\\s*А\\s*В\\s*А\\s+(.+)$",
+    "paragraph": "^\\s*§\\s*(\\d+(?:[–-]\\d+)?)\\s+(.+)$",
+    "section": "^\\s*(\\d+)\\s+([А-ЯЁ][^\\n]{3,})$",
+    "main_question": "^\\s*\\?\\s*(.+)$",
+    "sync_table": "РОССиЯ\\s+МиР"
+  },
+  "special_blocks": {
+    "historical_portrait": "иСторичеСкий портрет",
+    "witness_of_epoch": "СвидетельСтво эпохи",
+    "curious_details": "Любопытные детали",
+    "work_with_chronology": "Работаем с ХРОнОЛОГиеЙ",
+    "work_with_source": "Работаем с иСТОЧниКОМ",
+    "work_with_concepts": "Работаем с ПОнЯТиЯМи",
+    "summary": "ПОдВедЁМ иТОГи",
+    "questions_tasks": "ВОПРОСЫ и ЗАдАниЯ",
+    "additional_materials": "дОПОЛниТеЛЬнЫе МАТеРиАЛЫ",
+    "chapter_summary": "иТОГи ГЛАВЫ",
+    "chapter_questions": "ВОПРОСЫ и ЗАдАниЯ К ГЛАВе"
+  },
+  "formatting": {
+    "bold_dates": true,
+    "italic_terms": true,
+    "bold_italic_figures": true
+  },
+  "fonts": {
+    "regular": [
+      "TextbookNSanPin-Regular",
+      "NewtonSanPin-Regular"
+    ],
+    "bold": [
+      "TextbookNSanPin-Bold",
+      "NewtonSanPin-Bold"
+    ],
+    "italic": [
+      "TextbookNSanPin-Italic",
+      "NewtonSanPin-Italic"
+    ],
+    "bold_italic": [
+      "TextbookNSanPin-BoldItalic",
+      "NewtonSanPin-BoldItalic"
+    ],
+    "headers": [
+      "Bloc",
+      "BlocExtCond",
+      "PragmaticaSanPin"
+    ]
+  },
+  "noise_patterns": [
+    "^\\d+\\s*$",
+    "^\\d{2}-\\d{4}-\\d{2}-\\d{3}-\\d{3}_\\w+\\.indd\\s+\\d+\\s+\\d+\\.\\d+\\.\\d+\\s+\\d+:\\d+:\\d+$",
+    "^[A-F0-9]{4}$",
+    "^\\d+\\s+[А-ЯЁ][а-яё]+\\s+\\d+$"
+  ],
+  "footer_patterns": [
+    "^\\d{2}-\\d{4}-\\d{2}-\\d{3}-\\d{3}_\\w+\\.indd",
+    "^[A-F0-9]{4}$"
+  ]
+}
