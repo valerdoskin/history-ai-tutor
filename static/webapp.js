@@ -12,6 +12,12 @@ if (tg) {
     userId = tg.initDataUnsafe?.user?.id || null;
 }
 
+// Fallback: user_id из query-параметра (для тестирования без Telegram)
+const urlUserId = new URLSearchParams(window.location.search).get('user_id');
+if (!userId && urlUserId) {
+    userId = urlUserId;
+}
+
 // ============================================================
 // Вкладки
 // ============================================================
@@ -310,3 +316,82 @@ async function loadProfile() {
         content.innerHTML = '<p class="hint">Ошибка загрузки профиля.</p>';
     }
 }
+
+// ============================================================
+// Карточки (SRS)
+// ============================================================
+let currentCards = [];
+let currentCardIndex = 0;
+
+async function loadCards() {
+    const content = document.getElementById('cards-content');
+    try {
+        const resp = await fetch(`/api/cards?user_id=${userId}`);
+        const data = await resp.json();
+        currentCards = data.cards || [];
+        currentCardIndex = 0;
+        const summary = data.summary || {};
+        if (!currentCards.length) {
+            content.innerHTML = `
+                <div class="cards-summary">
+                    <p class="hint">🎉 На сегодня карточек нет!</p>
+                    <p class="hint">Изучено: ${summary.learned_cards || 0} · Всего: ${summary.total_cards || 0}</p>
+                </div>
+            `;
+            return;
+        }
+        renderCard();
+    } catch (e) {
+        content.innerHTML = '<p class="hint">Ошибка загрузки карточек.</p>';
+    }
+}
+
+function renderCard() {
+    const content = document.getElementById('cards-content');
+    const card = currentCards[currentCardIndex];
+    if (!card) {
+        content.innerHTML = '<p class="hint">🎉 Все карточки на сегодня пройдены!</p>';
+        return;
+    }
+    content.innerHTML = `
+        <div class="card-item">
+            <div class="card-topic">${card.topic || ''}</div>
+            <div class="card-question">${card.question || ''}</div>
+            <button id="card-show-answer" class="btn-secondary">Показать ответ</button>
+            <div id="card-answer" class="card-answer" style="display:none">
+                <p>${card.answer || ''}</p>
+                <div class="card-rating">
+                    <button class="btn-rating" data-quality="1">😞 Снова</button>
+                    <button class="btn-rating" data-quality="3">😕 Сложно</button>
+                    <button class="btn-rating" data-quality="5">😊 Легко</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('card-show-answer').addEventListener('click', () => {
+        document.getElementById('card-answer').style.display = 'block';
+    });
+    document.querySelectorAll('.btn-rating').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const quality = parseInt(btn.dataset.quality);
+            await reviewCard(card.id, quality);
+        });
+    });
+}
+
+async function reviewCard(cardId, quality) {
+    try {
+        await fetch('/api/cards/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, card_id: cardId, quality }),
+        });
+        currentCardIndex++;
+        renderCard();
+    } catch (e) {
+        const content = document.getElementById('cards-content');
+        content.innerHTML = '<p class="hint">Ошибка при оценке карточки.</p>';
+    }
+}
+
+document.getElementById('cards-btn').addEventListener('click', loadCards);

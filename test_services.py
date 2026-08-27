@@ -127,6 +127,42 @@ class TestAdaptive(unittest.TestCase):
         prompt = adaptive_service.personalize_prompt(1)
         self.assertIn("Уровень ученика", prompt)
 
+    def test_add_and_get_daily_cards(self):
+        from services import adaptive_service
+        adaptive_service.add_card(1, "Тема 1", "Вопрос?", "Ответ")
+        cards = adaptive_service.get_daily_cards(1)
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]["topic"], "Тема 1")
+
+    def test_review_card_sm2(self):
+        from services import adaptive_service
+        adaptive_service.add_card(1, "Тема 1", "Вопрос?", "Ответ")
+        cards = adaptive_service.get_daily_cards(1)
+        card_id = cards[0]["id"]
+        result = adaptive_service.review_card(card_id, 5)
+        self.assertTrue(result["passed"])
+        self.assertEqual(result["next_interval_days"], 1)
+        # Повторный успешный ответ — интервал растёт
+        result2 = adaptive_service.review_card(card_id, 5)
+        self.assertEqual(result2["next_interval_days"], 6)
+
+    def test_review_card_fail_resets(self):
+        from services import adaptive_service
+        adaptive_service.add_card(1, "Тема 1", "Вопрос?", "Ответ")
+        cards = adaptive_service.get_daily_cards(1)
+        card_id = cards[0]["id"]
+        adaptive_service.review_card(card_id, 5)
+        result = adaptive_service.review_card(card_id, 1)
+        self.assertFalse(result["passed"])
+        self.assertEqual(result["next_interval_days"], 1)
+
+    def test_srs_summary(self):
+        from services import adaptive_service
+        adaptive_service.add_card(1, "Тема 1", "Вопрос?", "Ответ")
+        summary = adaptive_service.get_srs_summary(1)
+        self.assertEqual(summary["total_cards"], 1)
+        self.assertEqual(summary["due_cards"], 1)
+
 
 class TestRAGBuildContext(unittest.TestCase):
     def test_build_context(self):

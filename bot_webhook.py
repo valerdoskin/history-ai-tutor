@@ -479,6 +479,58 @@ def api_progress():
         return jsonify({"error": "Не удалось получить прогресс"}), 500
 
 
+@app.route("/api/cards", methods=["GET"])
+def api_cards():
+    """API для Web App: ежедневные карточки для повторения."""
+    user_id = request.args.get("user_id")
+    if not user_id or user_id == "null":
+        return jsonify({"error": "user_id required"}), 400
+    try:
+        cards = adaptive_service.get_daily_cards(int(user_id))
+        summary = adaptive_service.get_srs_summary(int(user_id))
+        return jsonify({"cards": cards, "summary": summary})
+    except Exception as e:
+        logger.error(f"Ошибка получения карточек: {e}")
+        return jsonify({"error": "Не удалось получить карточки"}), 500
+
+
+@app.route("/api/cards", methods=["POST"])
+def api_cards_add():
+    """API для Web App: добавить карточку для повторения."""
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    if not user_id or user_id == "null":
+        return jsonify({"error": "user_id required"}), 400
+    topic = data.get("topic", "")
+    question = data.get("question", "")
+    answer = data.get("answer", "")
+    if not topic or not question or not answer:
+        return jsonify({"error": "topic, question и answer обязательны"}), 400
+    result = adaptive_service.add_card(int(user_id), topic, question, answer)
+    return jsonify(result)
+
+
+@app.route("/api/cards/review", methods=["POST"])
+def api_cards_review():
+    """API для Web App: оценить карточку (SM-2)."""
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    if not user_id or user_id == "null":
+        return jsonify({"error": "user_id required"}), 400
+    card_id = data.get("card_id")
+    quality = data.get("quality")
+    if card_id is None or quality is None:
+        return jsonify({"error": "card_id и quality обязательны"}), 400
+    try:
+        result = adaptive_service.review_card(int(card_id), int(quality))
+        if not result:
+            return jsonify({"error": "Карточка не найдена"}), 404
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Ошибка оценки карточки: {e}")
+        return jsonify({"error": "Не удалось оценить карточку"}), 500
+
+
 @app.route("/api/health")
 def health():
     return jsonify({"status": "ok"})

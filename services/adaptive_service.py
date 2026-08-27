@@ -1,8 +1,10 @@
 """
-Сервис адаптивного обучения: определение уровня, персонализация.
+Сервис адаптивного обучения: определение уровня, персонализация,
+интервальное повторение (SRS) и ежедневные карточки.
 
-Определяет уровень знаний пользователя и подбирает задания
-сложности, соответствующей его прогрессу.
+Определяет уровень знаний пользователя, подбирает задания
+сложности, соответствующей его прогрессу, и организует
+повторение материала по алгоритму SM-2.
 """
 
 import logging
@@ -10,6 +12,9 @@ import logging
 from database import db
 
 logger = logging.getLogger(__name__)
+
+# Порог качества для SM-2 (ниже — карточка считается забытой)
+SRS_PASS_THRESHOLD = 3
 
 
 def estimate_level(user_id):
@@ -81,3 +86,70 @@ def personalize_prompt(user_id):
         f"{prompts.get(level, prompts[3])} "
         f"Слабые темы для повторения: {weak_str}."
     )
+
+
+# ============================================================
+# SRS (интервальное повторение) и ежедневные карточки
+# ============================================================
+def add_card(user_id, topic, question, answer):
+    """Добавляет карточку для интервального повторения."""
+    db.add_srs_card(user_id, topic, question, answer)
+    return {"status": "ok", "topic": topic}
+
+
+def get_daily_cards(user_id, limit=10):
+    """
+    Возвращает ежедневные карточки для повторения.
+    Сначала — карточки, подлежащие повторению (due), затем новые из слабых тем.
+    """
+    due = db.get_due_cards(user_id, limit)
+    if len(due) >= limit:
+        return due
+
+    # Добираем карточки из слабых тем, если их ещё нет в SRS
+    existing_topics = {c["topic"] for c in db.get_all_cards(user_id)}
+    weak = db.get_weak_topics(user_id, limit=5)
+    for topic in weak:
+        if len(due) >= limit:
+            break
+        if topic["topic"] in existing_topics:
+            continue
+        card = _make_card_from_topic(user_id, topic["topic"])
+        if card:
+            due.append(card)
+    return due
+
+
+def _make_card_from_topic(user_id, topic):
+    """Создаёт карточку-вопрос по слабой теме (без вызова LLM)."""
+    question = f"Повтори тему: {topic}"
+    answer = "Открой раздел «Темы» и прочитай материал по этой теме."
+    db.add_srs_card(user_id, topic, question, answer)
+    cards = db.get_all_cards(user_id, limit=1)
+    return cards[0] if cards else None
+
+
+def review_card(card_id, quality):
+    """
+    Оценивает карточку по шкале 0-5 (SM-2).
+    Возвращает обновлённую карточку и следующий интервал повторения.
+    """
+    card = db.review_srs_card(card_id, quality)
+    if not card:
+        return None
+    return {
+        "card": card,
+        "passed": quality >= SRS_PASS_THRESHOLD,
+        "next_interval_days": card["interval"],
+    }
+
+
+def get_srs_summary(user_id):
+    """Возвращает сводку по карточкам пользователя."""
+    all_cards = db.get_all_cards(user_id)
+    due_count = db.count_due_cards(user_id)
+    return {
+        "total_cards": len(all_cards),
+        "due_cards": due_count,
+        "learned_cards": sum(1 for c in all_cards if c["repetitions"] >= 3),
+    }

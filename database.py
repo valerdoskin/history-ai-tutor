@@ -93,6 +93,20 @@ class Database:
                     last_seen INTEGER DEFAULT 0,
                     PRIMARY KEY (user_id, topic)
                 );
+
+                CREATE TABLE IF NOT EXISTS srs_cards (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    topic TEXT,
+                    question TEXT,
+                    answer TEXT,
+                    interval INTEGER DEFAULT 0,
+                    ease REAL DEFAULT 2.5,
+                    repetitions INTEGER DEFAULT 0,
+                    due_at INTEGER DEFAULT 0,
+                    last_reviewed INTEGER DEFAULT 0,
+                    created_at INTEGER DEFAULT 0
+                );
                 """
             )
 
@@ -280,6 +294,90 @@ class Database:
                 "correct_questions": correct_q,
                 "accuracy": round(correct_q / total_q * 100, 1) if total_q else 0,
             }
+
+    # ============================================================
+    # SRS (интервальное повторение)
+    # ============================================================
+    def add_srs_card(self, user_id, topic, question, answer):
+        """Добавляет карточку для интервального повторения."""
+        now = int(time.time())
+        with self._conn() as conn:
+            conn.execute(
+                """
+                INSERT INTO srs_cards (user_id, topic, question, answer, due_at, created_at)
+                VALUES (?,?,?,?,?,?)
+                """,
+                (user_id, topic, question, answer, now, now),
+            )
+
+    def get_due_cards(self, user_id, limit=20):
+        """Возвращает карточки, подлежащие повторению (due_at <= now)."""
+        now = int(time.time())
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM srs_cards WHERE user_id=? AND due_at<=? ORDER BY due_at ASC LIMIT ?",
+                (user_id, now, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def get_all_cards(self, user_id, limit=100):
+        """Возвращает все карточки пользователя."""
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM srs_cards WHERE user_id=? ORDER BY due_at ASC LIMIT ?",
+                (user_id, limit),
+            ).fetchall()
+            return [dict(r) for r in rows]
+
+    def review_srs_card(self, card_id, quality):
+        """
+        Обновляет карточку по алгоритму SM-2.
+        quality: 0-5 (0 — полное забывание, 5 — идеальный ответ).
+        Возвращает обновлённую карточку.
+        """
+        with self._conn() as conn:
+            row = conn.execute("SELECT * FROM srs_cards WHERE id=?", (card_id,)).fetchone()
+            if not row:
+                return None
+            card = dict(row)
+            now = int(time.time())
+            day = 86400
+
+            if quality < 3:
+                card["repetitions"] = 0
+                card["interval"] = 1
+            else:
+                if card["repetitions"] == 0:
+                    card["interval"] = 1
+                elif card["repetitions"] == 1:
+                    card["interval"] = 6
+                else:
+                    card["interval"] = round(card["interval"] * card["ease"])
+                card["repetitions"] += 1
+
+            card["ease"] = max(1.3, card["ease"] + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)))
+            card["due_at"] = now + card["interval"] * day
+            card["last_reviewed"] = now
+
+            conn.execute(
+                """
+                UPDATE srs_cards
+                SET interval=?, ease=?, repetitions=?, due_at=?, last_reviewed=?
+                WHERE id=?
+                """,
+                (card["interval"], card["ease"], card["repetitions"], card["due_at"], card["last_reviewed"], card_id),
+            )
+            return card
+
+    def count_due_cards(self, user_id):
+        """Возвращает количество карточек, ожидающих повторения."""
+        now = int(time.time())
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) as c FROM srs_cards WHERE user_id=? AND due_at<=?",
+                (user_id, now),
+            ).fetchone()
+            return row["c"]
 
 
 # Глобальный экземпляр
