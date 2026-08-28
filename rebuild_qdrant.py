@@ -76,6 +76,7 @@ def main() -> None:
             "chunk_index": chunk.get("chunk_index", 0),
             "chunk_total": chunk.get("chunk_total", 1),
             "text": chunk.get("text", ""),
+            "metadata": chunk.get("metadata", {}),
         }
         points.append(
             models.PointStruct(
