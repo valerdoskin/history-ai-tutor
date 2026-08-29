@@ -36,8 +36,20 @@ CLASS_DESCRIPTIONS = {
     10: "Первая и Вторая мировые войны; Россия 1914–1945 гг., СССР",
 }
 
-# Количество вопросов на класс (всего 10)
-QUESTIONS_PER_CLASS = {5: 2, 6: 2, 7: 2, 8: 1, 9: 1, 10: 2}
+# Количество вопросов на класс в зависимости от числа выбранных классов.
+# Значение — диапазон (мин, макс); фактическое число выбирается случайно
+# в пределах диапазона и одинаково для всех выбранных классов.
+QUESTIONS_PER_CLASS_BY_COUNT = {
+    1: (10, 10),
+    2: (8, 9),
+    3: (6, 7),
+    4: (5, 6),
+    5: (4, 5),
+    6: (3, 4),
+}
+
+# Размер реестра вопросов на класс (из него случайно выбираются вопросы в тест)
+REGISTRY_SIZE = 50
 
 
 def get_class_from_source(source_file):
@@ -142,12 +154,20 @@ def _build_mcq_with_distractors(question, answer, distractors):
     }
 
 
-def generate_placement_test(user_id=None, num_questions=10):
+def _questions_per_class(num_classes):
+    """Возвращает количество вопросов на класс для заданного числа классов."""
+    lo, hi = QUESTIONS_PER_CLASS_BY_COUNT.get(num_classes, (3, 4))
+    return random.randint(lo, hi)
+
+
+def generate_placement_test(user_id=None, num_questions=None):
     """
     Генерирует тест уровня: список вопросов с вариантами ответа.
 
-    Покрывает все классы 5–10. Если пользователь выбрал классы —
-    вопросы берутся только из выбранных классов.
+    Тест формируется по выбранным пользователем классам. Количество вопросов
+    на каждый класс зависит от числа выбранных классов (см.
+    QUESTIONS_PER_CLASS_BY_COUNT). Вопросы случайно выбираются из реестра
+    вопросов каждого класса (REGISTRY_SIZE вопросов).
     """
     selected = "all"
     if user_id:
@@ -162,34 +182,29 @@ def generate_placement_test(user_id=None, num_questions=10):
         if not classes:
             classes = ALL_CLASSES
 
-    # Собираем вопросы по классам
+    # Сколько вопросов на каждый класс
+    take = _questions_per_class(len(classes))
+
+    # Собираем вопросы по классам: из реестра каждого класса случайно
+    # выбираем нужное количество вопросов (без повторений в рамках теста).
     questions = []
     for cls in classes:
         qs = _get_exam_questions_for_class(cls)
         if not qs:
             continue
-        random.shuffle(qs)
-        # Берём по 1 вопросу на класс (или 2 для первых классов)
-        take = QUESTIONS_PER_CLASS.get(cls, 1)
-        for q in qs[:take]:
+        # Убираем дубликаты вопросов (один и тот же вопрос встречается
+        # в нескольких чанках/параграфах)
+        seen_q = set()
+        unique_qs = []
+        for q in qs:
+            if q["question"] not in seen_q:
+                seen_q.add(q["question"])
+                unique_qs.append(q)
+        random.shuffle(unique_qs)
+        # Реестр класса — до REGISTRY_SIZE уникальных вопросов
+        registry = unique_qs[:REGISTRY_SIZE]
+        for q in registry[:take]:
             questions.append((cls, q))
-
-    # Если вопросов мало — добираем из других классов
-    if len(questions) < num_questions:
-        for cls in ALL_CLASSES:
-            if len(questions) >= num_questions:
-                break
-            if cls in classes:
-                continue
-            qs = _get_exam_questions_for_class(cls)
-            random.shuffle(qs)
-            for q in qs:
-                if len(questions) >= num_questions:
-                    break
-                questions.append((cls, q))
-
-    # Ограничиваем до num_questions
-    questions = questions[:num_questions]
 
     # Строим MCQ с дистракторами, тематически связанными с вопросом.
     # Приоритет: тот же параграф -> тот же класс -> другие классы.
