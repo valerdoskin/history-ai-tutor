@@ -18,6 +18,17 @@ if (!userId && urlUserId) {
     userId = urlUserId;
 }
 
+// Fallback: локальный user_id для тестирования без Telegram (стабильный между сессиями)
+if (!userId) {
+    let localId = localStorage.getItem('history_ai_tutor_user_id');
+    if (!localId) {
+        // Числовой ID в диапазоне 900000-999999, чтобы не конфликтовать с реальными Telegram ID
+        localId = String(900000 + Math.floor(Math.random() * 100000));
+        localStorage.setItem('history_ai_tutor_user_id', localId);
+    }
+    userId = localId;
+}
+
 // ============================================================
 // Вкладки
 // ============================================================
