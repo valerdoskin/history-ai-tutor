@@ -370,6 +370,11 @@ def paragraph_to_text(entry):
             if content:
                 parts.append(content)
 
+    # Плоский текст (PDF-парсеры 11 класса кладут текст в content)
+    for content in para.get("content", []):
+        if content:
+            parts.append(content)
+
     # Спецблоки
     for block_type, blocks in para.get("special_blocks", {}).items():
         if isinstance(blocks, list):
@@ -401,6 +406,7 @@ def main():
     parser.add_argument("--resume", action="store_true", help="Продолжить с места остановки")
     parser.add_argument("--mock", action="store_true", help="Режим заглушки (без API)")
     parser.add_argument("--limit", type=int, default=None, help="Обработать только N параграфов")
+    parser.add_argument("--only", default="", help="Обработать только параграфы из source_file, содержащего подстроку")
     args = parser.parse_args()
 
     os.makedirs(KNOWLEDGE_DIR, exist_ok=True)
@@ -413,6 +419,13 @@ def main():
 
     # Загружаем все параграфы
     all_entries = load_all_paragraphs()
+    if args.only:
+        only_lower = args.only.lower()
+        all_entries = [
+            e for e in all_entries
+            if only_lower in e.get("source_file", "").lower()
+        ]
+        logger.info(f"Фильтр --only '{args.only}': осталось {len(all_entries)} параграфов")
     if args.limit:
         all_entries = all_entries[:args.limit]
 
@@ -444,7 +457,13 @@ def main():
     for i, entry in enumerate(all_entries):
         para = entry["paragraph"]
         # Ключ параграфа: book_id + chapter + title
-        para_key = f"{entry['book_id']}::{entry['chapter_number']}::{para.get('title', '')}"
+        para_title = para.get("title", "")
+        # Для параграфов без заголовка (PDF 11 класса) используем page_start,
+        # чтобы ключ был уникальным в пределах главы.
+        if para_title:
+            para_key = f"{entry['book_id']}::{entry['chapter_number']}::{para_title}"
+        else:
+            para_key = f"{entry['book_id']}::{entry['chapter_number']}::__p{para.get('page_start', '')}"
 
         # Пропускаем уже успешно обработанные (для --resume).
         # Параграфы со статусом "error" или "empty" обрабатываем заново.

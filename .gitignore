@@ -44,3 +44,7 @@ Thumbs.db
 # Временные файлы
 tmp/
 temp/
+
+# DOCX-исходники 11 класса (парсинг идёт из PDF)
+books/Vseobschaya_11.docx
+books/Istoriya_Rossii_11kl_2023.docx

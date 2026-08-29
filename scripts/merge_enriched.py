@@ -33,7 +33,13 @@ def main() -> None:
     matched = 0
     unmatched_chunks = 0
     for chunk in chunks:
-        para_key = f"{chunk['book_id']}::{chunk['chapter_number']}::{chunk['paragraph_title']}"
+        # Для параграфов без заголовка (PDF 11 класса) используем page_start,
+        # чтобы ключ совпадал с ключом в enriched.json.
+        para_title = chunk.get("paragraph_title", "")
+        if para_title:
+            para_key = f"{chunk['book_id']}::{chunk['chapter_number']}::{para_title}"
+        else:
+            para_key = f"{chunk['book_id']}::{chunk['chapter_number']}::__p{chunk.get('page_start', '')}"
         meta = enriched.get(para_key, {}).get("metadata", {})
         chunk["metadata"] = meta
         if meta:

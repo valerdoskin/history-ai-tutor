@@ -134,15 +134,18 @@ def process_book(book_path: Path) -> List[Dict[str, Any]]:
     config = load_config(config_name)
     parser = parser_cls(config)
 
-    # Парсим документ
-    from docx import Document
+    # Парсим документ (PDF-парсеры принимают путь, DOCX-парсеры — Document)
+    if getattr(parser, "is_pdf_parser", False):
+        chapters = parser.parse_document(str(book_path))
+    else:
+        from docx import Document
 
-    doc = Document(str(book_path))
-    chapters = parser.parse_document(doc)
-    parser.assign_chapter_numbers(chapters)
-    for chapter in chapters:
-        for paragraph in chapter["paragraphs"]:
-            parser.extract_key_elements(paragraph)
+        doc = Document(str(book_path))
+        chapters = parser.parse_document(doc)
+        parser.assign_chapter_numbers(chapters)
+        for chapter in chapters:
+            for paragraph in chapter["paragraphs"]:
+                parser.extract_key_elements(paragraph)
 
     book_id = config["book_id"]
     book_line = config["book_line"]
@@ -158,6 +161,8 @@ def process_book(book_path: Path) -> List[Dict[str, Any]]:
             page_start = paragraph.get("page_start")
             page_end = paragraph.get("page_end")
             main_question = paragraph.get("main_question", "")
+            # Убираем лишние «?» в конце вопроса (артефакты PDF/DOCX)
+            main_question = re.sub(r"\s*\?+\s*$", "?", main_question).strip()
 
             full_text = build_paragraph_text(paragraph)
             full_text = fix_hyphenation(full_text)
@@ -167,7 +172,9 @@ def process_book(book_path: Path) -> List[Dict[str, Any]]:
             text_chunks = split_into_chunks(full_text)
             total = len(text_chunks)
             for i, tc in enumerate(text_chunks):
-                chunk_id = f"{book_id}::{chapter_number}::{para_title}::{i}"
+                # page_start добавляется в id, чтобы параграфы с одинаковым
+                # заголовком в одной главе (PDF 11 класса) имели уникальные id.
+                chunk_id = f"{book_id}::{chapter_number}::{para_title}::p{page_start}::{i}"
                 chunks.append({
                     "id": chunk_id,
                     "book_id": book_id,
@@ -202,21 +209,57 @@ def main() -> None:
         logger.error("Папка с учебниками не найдена: %s", books_dir)
         sys.exit(1)
 
-    docx_files = sorted(books_dir.glob("*.docx"))
+    book_files = sorted(list(books_dir.glob("*.docx")) + list(books_dir.glob("*.pdf")))
     if args.only:
-        docx_files = [f for f in docx_files if args.only.lower() in f.name.lower()]
-        if not docx_files:
-            logger.error("Нет DOCX-файлов, содержащих '%s'", args.only)
+        book_files = [f for f in book_files if args.only.lower() in f.name.lower()]
+        if not book_files:
+            logger.error("Нет файлов, содержащих '%s'", args.only)
             sys.exit(1)
 
-    all_chunks: List[Dict[str, Any]] = []
-    for book_path in docx_files:
+    # Если для книги есть и DOCX, и PDF, и для PDF есть специализированный
+    # PDF-парсер — используем только PDF (DOCX-версия 11 класса некорректна).
+    pdf_names = {f.name.lower() for f in book_files if f.suffix.lower() == ".pdf"}
+    filtered: List[Path] = []
+    for f in book_files:
+        if f.suffix.lower() == ".docx":
+            base = f.name.lower().replace(".docx", "")
+            pdf_candidate = base + ".pdf"
+            if pdf_candidate in pdf_names:
+                entry = get_parser_for_file(pdf_candidate)
+                if entry and entry.get("is_pdf"):
+                    logger.info("Пропускаю DOCX %s (есть PDF-версия с парсером)", f.name)
+                    continue
+        filtered.append(f)
+    book_files = filtered
+
+    # При --only загружаем существующий chunks.json и заменяем только
+    # чанки выбранных книг, сохраняя остальные.
+    existing_chunks: List[Dict[str, Any]] = []
+    output_path = Path(args.output)
+    if args.only and output_path.exists():
         try:
-            all_chunks.extend(process_book(book_path))
+            with open(output_path, "r", encoding="utf-8") as f:
+                existing_chunks = json.load(f)
+            logger.info("Загружено существующих чанков: %d", len(existing_chunks))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Не удалось загрузить существующий chunks.json: %s", exc)
+            existing_chunks = []
+
+    selected_names = {f.name for f in book_files}
+    if args.only:
+        existing_chunks = [
+            c for c in existing_chunks
+            if c.get("source_file", "") not in selected_names
+        ]
+
+    new_chunks: List[Dict[str, Any]] = []
+    for book_path in book_files:
+        try:
+            new_chunks.extend(process_book(book_path))
         except Exception as exc:  # noqa: BLE001
             logger.error("Ошибка при обработке %s: %s", book_path.name, exc)
 
-    output_path = Path(args.output)
+    all_chunks = existing_chunks + new_chunks
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(all_chunks, f, ensure_ascii=False, indent=2)

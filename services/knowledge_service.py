@@ -50,6 +50,8 @@ def get_class_from_source(source_file):
         return 9
     if "10kl" in s or "10_kl" in s or "vseobschaya_10" in s:
         return 10
+    if "11kl" in s or "11_kl" in s or "vseobschaya_11" in s:
+        return 11
     return None
 
 

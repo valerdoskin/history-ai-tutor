@@ -20,6 +20,10 @@ from base_docx_parser import (
     paragraph_runs,
     _is_year_range,
 )
+from pdf_parsers import (
+    Parser11KlassVseobschayaPdf,
+    Parser11KlassRossiiPdf,
+)
 
 
 def _is_uppercase_title(text: str) -> bool:
@@ -455,6 +459,112 @@ class ParserZa9Klass(BaseDocxParser):
         return "add"
 
 
+class Parser11KlassVseobschaya(Parser10KlassVseobschaya):
+    """11 класс — Всеобщая история.
+
+    Структура глав:
+      - «ГЛАВА    НАЗВАНИЕ» (Normal, название на той же строке) →
+        продолжение названия (Normal) → текст главы.
+      - Параграфы: в теле учебника НЕТ явных заголовков «§ N».
+        Текст организован разделами [Normal] «N Название.» (например,
+        «1 Появление биполярного мира.»). Каждый такой раздел считаем
+        отдельным параграфом.
+
+    Правило для этой книги:
+      - Параграф — это раздел [Normal] «N Название.» (число + заглавная буква).
+      - Название главы собирается из Normal-параграфов (смешанный регистр)
+        до первого раздела-параграфа. Римская цифра номера главы (I, II, III…),
+        встроенная в строку «ГЛАВА …», удаляется.
+    """
+
+    def is_chapter_start(self, text: str) -> bool:
+        # «ГЛАВА    НАЗВАНИЕ» (название на той же строке).
+        m = re.match(r"^\s*ГЛАВА\s+(.+)$", text)
+        if m:
+            self._pending_chapter_title = m.group(1).strip()
+            return True
+        return False
+
+    def collect_chapter_title(self, paragraph, text, current_chapter,
+                              collecting_chapter_name, collecting_chapter_title,
+                              pending_paragraph_number) -> str:
+        # Если название главы начиналось на той же строке, что и «ГЛАВА»,
+        # добавляем его к названию главы.
+        if getattr(self, "_pending_chapter_title", ""):
+            current_chapter["title"] = self._pending_chapter_title
+            self._pending_chapter_title = ""
+        # Раздел [Normal] «N Название.» — это параграф, название главы закончилось.
+        if self.is_paragraph_heading(paragraph):
+            return "paragraph"
+        # Body Text — текст главы, название закончилось.
+        if paragraph.style.name == "Body Text":
+            return "skip"
+        # Подписи, вопросы — пропускаем.
+        if self.is_caption_paragraph(text, paragraph_runs(paragraph)):
+            return "skip"
+        if "?" in text:
+            return "skip"
+        # Подпись к иллюстрации: короткий Normal-параграф (≤ 40 символов),
+        # не содержащий римскую цифру века (XX, XXI) и не являющийся
+        # диапазоном лет. Название главы закончилось.
+        if (
+            paragraph.style.name == "Normal"
+            and len(text) <= 40
+            and not re.search(r"\b[IVXLCDM]{2,}\b", text)
+            and not _is_year_range(text)
+        ):
+            return "skip"
+        # Собираем продолжение названия главы (Normal, смешанный регистр).
+        if current_chapter["title"]:
+            current_chapter["title"] += " " + text
+        else:
+            current_chapter["title"] = text
+        return "add"
+
+    def is_paragraph_heading(self, paragraph) -> bool:
+        # Параграфы — разделы [Normal] «N Название.» (число + заглавная буква).
+        text = paragraph.text.strip()
+        if paragraph.style.name == "Normal" and re.match(r"^\d+\s+[А-ЯЁ]", text):
+            return True
+        return False
+
+
+class Parser11KlassRossii(BaseDocxParser):
+    """11 класс — История России.
+
+    Структура:
+      - Явных глав НЕТ. Параграфы идут напрямую: [Heading 1] «§ N Название».
+      - Внутри параграфа: [Heading 2] РОССИЯ, [Heading 3] МИР,
+        [Heading 4] спецблоки, [Heading 5] ПОДВЕДЁМ ИТОГИ, [Heading 6] вопросы.
+
+    Правило для этой книги:
+      - Создаём одну главу для всего учебника при первом параграфе.
+      - Параграф — это [Heading 1] «§ N Название».
+    """
+
+    def is_chapter_start(self, text: str) -> bool:
+        # Создаём одну главу при первом параграфе «§ N».
+        if not getattr(self, "_chapter_created", False) and re.match(r"^\s*§\s*\d+", text):
+            self._chapter_created = True
+            return True
+        return False
+
+    def collect_chapter_title(self, paragraph, text, current_chapter,
+                              collecting_chapter_name, collecting_chapter_title,
+                              pending_paragraph_number) -> str:
+        # Параграф «§ N» — название главы закончилось.
+        if self.is_paragraph_heading(paragraph):
+            return "paragraph"
+        return "skip"
+
+    def is_paragraph_heading(self, paragraph) -> bool:
+        # Параграфы — [Heading 1] «§ N Название».
+        text = paragraph.text.strip()
+        if paragraph.style.name == "Heading 1" and text.startswith("§"):
+            return True
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Реестр парсеров: выбор по имени файла.
 # ---------------------------------------------------------------------------
@@ -507,6 +617,28 @@ PARSER_REGISTRY: List[Dict[str, Any]] = [
         "config": "config_world_history.json",
     },
     {
+        "match": "vseobschaya_11",
+        "parser": Parser11KlassVseobschaya,
+        "config": "config_world_history.json",
+    },
+    {
+        "match": "istoriya_rossii_11",
+        "parser": Parser11KlassRossii,
+        "config": "config_russia_history.json",
+    },
+    {
+        "match": "vseobschaya_11",
+        "parser": Parser11KlassVseobschayaPdf,
+        "config": "config_world_history.json",
+        "is_pdf": True,
+    },
+    {
+        "match": "istoriya_rossii_11",
+        "parser": Parser11KlassRossiiPdf,
+        "config": "config_russia_history.json",
+        "is_pdf": True,
+    },
+    {
         "match": "za_8",
         "parser": ParserZa8Klass,
         "config": "config_russia_history.json",
@@ -523,10 +655,12 @@ def get_parser_for_file(filename: str) -> Optional[Dict[str, Any]]:
     """Возвращает запись реестра (класс парсера и конфиг) по имени файла.
 
     Ищет первое совпадение подстроки имени файла (без учёта регистра).
-    Если совпадений нет — возвращает None (используется базовый парсер).
+    Учитывает расширение файла: для .pdf выбирается PDF-парсер (is_pdf=True),
+    для .docx — DOCX-парсер. Если совпадений нет — возвращает None.
     """
     name = filename.lower()
+    is_pdf = name.endswith(".pdf")
     for entry in PARSER_REGISTRY:
-        if entry["match"] in name:
+        if entry["match"] in name and entry.get("is_pdf", False) == is_pdf:
             return entry
     return None

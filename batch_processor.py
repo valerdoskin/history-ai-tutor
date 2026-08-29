@@ -27,6 +27,39 @@ from base_docx_parser import BaseDocxParser, load_config
 from parser import parse_textbook as parse_pdf_textbook
 from parsers import get_parser_for_file
 
+
+def parse_pdf_with_specialized_parser(
+    pdf_path: str, config_path: str, output_path: str
+) -> Dict[str, Any]:
+    """Обрабатывает PDF через специализированный PDF-парсер (11 класс).
+
+    PDF-парсеры возвращают список глав (data), а не полный output_data.
+    Здесь мы оборачиваем результат в единый формат output/*.json.
+    """
+    registry_entry = get_parser_for_file(Path(pdf_path).name)
+    if not registry_entry:
+        raise ValueError(f"Нет PDF-парсера для {pdf_path}")
+
+    parser_cls = registry_entry["parser"]
+    config_name = registry_entry["config"]
+    cfg = load_config(config_name)
+    parser = parser_cls(cfg)
+    chapters = parser.parse_document(pdf_path)
+
+    output_data = {
+        "book_id": cfg["book_id"],
+        "book_line": cfg["book_line"],
+        "source_file": Path(pdf_path).name,
+        "total_chapters": len(chapters),
+        "total_paragraphs": sum(len(ch["paragraphs"]) for ch in chapters),
+        "data": chapters,
+    }
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(output_data, f, ensure_ascii=False, indent=2)
+    logger.info("Готово! Глав: %d, параграфов: %d",
+                output_data["total_chapters"], output_data["total_paragraphs"])
+    return output_data
+
 # ---------------------------------------------------------------------------
 # Настройка логирования
 # ---------------------------------------------------------------------------
@@ -108,8 +141,19 @@ def process_book(
         parser = parser_cls(config)
         parse_func = lambda p, c, o: parser.parse_textbook(p, o)  # noqa: E731
     elif ext == ".pdf":
-        parse_func = parse_pdf_textbook
         fmt = "pdf"
+        # Для PDF сначала пробуем специализированный PDF-парсер (11 класс).
+        # Если его нет — используем стандартный PDF-парсер (fallback).
+        registry_entry = get_parser_for_file(book_path.name)
+        if registry_entry:
+            parser_cls = registry_entry["parser"]
+            config_name = registry_entry["config"]
+            logger.info("Парсер: %s (конфигурация: %s)",
+                        parser_cls.__name__, config_name)
+            parse_func = parse_pdf_with_specialized_parser
+        else:
+            logger.info("Парсер: %s (стандартный PDF-парсер)", parse_pdf_textbook.__name__)
+            parse_func = parse_pdf_textbook
     else:
         logger.error("Неподдерживаемый формат файла: %s", book_path.name)
         return {
@@ -164,6 +208,11 @@ def main() -> None:
         default="report.json",
         help="Имя файла отчёта (по умолчанию: report.json)",
     )
+    parser.add_argument(
+        "--only",
+        default="",
+        help="Обработать только файлы, содержащие эту подстроку",
+    )
     args = parser.parse_args()
 
     books_dir = Path(args.books_dir)
@@ -187,15 +236,32 @@ def main() -> None:
     # PDF-файлы, для которых нет соответствующего DOCX (fallback)
     fallback_pdf_files = [f for f in pdf_files if f.stem not in docx_stems]
 
-    book_files = docx_files + fallback_pdf_files
+    # PDF-файлы, для которых есть специализированный PDF-парсер (11 класс).
+    # Для них PDF предпочтительнее DOCX (DOCX-версия 11 класса некорректна).
+    specialized_pdf_files = [
+        f for f in pdf_files
+        if f.stem in docx_stems and get_parser_for_file(f.name)
+    ]
+
+    # DOCX-файлы, для которых НЕ используется специализированный PDF-парсер
+    specialized_pdf_stems = {f.stem for f in specialized_pdf_files}
+    docx_files = [f for f in docx_files if f.stem not in specialized_pdf_stems]
+
+    book_files = docx_files + fallback_pdf_files + specialized_pdf_files
+
+    if args.only:
+        book_files = [f for f in book_files if args.only.lower() in f.name.lower()]
+        if not book_files:
+            logger.error("Нет файлов, содержащих '%s'", args.only)
+            sys.exit(1)
 
     if not book_files:
         logger.error("В папке %s не найдено DOCX/PDF-файлов", books_dir)
         sys.exit(1)
 
-    logger.info("Найдено файлов: %d (DOCX: %d, PDF-fallback: %d, PDF пропущено: %d)",
+    logger.info("Найдено файлов: %d (DOCX: %d, PDF-fallback: %d, PDF-спец: %d)",
                 len(book_files), len(docx_files), len(fallback_pdf_files),
-                len(pdf_files) - len(fallback_pdf_files))
+                len(specialized_pdf_files))
 
     # Обрабатываем каждый файл
     results: List[Dict[str, Any]] = []

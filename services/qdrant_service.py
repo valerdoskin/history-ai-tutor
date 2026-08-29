@@ -78,6 +78,7 @@ def _build_class_filter(class_filter):
         8: ["8_klass"],
         9: ["9_klass"],
         10: ["10kl", "10_kl", "vseobschaya_10"],
+        11: ["11kl", "11_kl", "vseobschaya_11"],
     }
     patterns = []
     for cls in classes:

@@ -57,7 +57,7 @@ _test_cache = {}
 _TEST_TTL = 3600  # 1 час
 
 # Классы, представленные в базе знаний
-ALL_CLASSES = [5, 6, 7, 8, 9, 10]
+ALL_CLASSES = [5, 6, 7, 8, 9, 10, 11]
 
 # Краткое описание классов (что изучалось)
 CLASS_DESCRIPTIONS = {
@@ -67,6 +67,7 @@ CLASS_DESCRIPTIONS = {
     8: "Век перемен; Российская империя: Пётр I, дворцовые перевороты, Екатерина II",
     9: "Индустриальная эпоха; Россия в XIX в.: Николай I, Александр II и III",
     10: "Первая и Вторая мировые войны; Россия 1914–1945 гг., СССР",
+    11: "Послевоенный мир; Россия и мир во второй половине XX — начале XXI в.",
 }
 
 # Количество вопросов на класс в зависимости от числа выбранных классов.
@@ -79,10 +80,13 @@ QUESTIONS_PER_CLASS_BY_COUNT = {
     4: (5, 6),
     5: (4, 5),
     6: (3, 4),
+    7: (3, 3),
 }
 
-# Размер реестра вопросов на класс (из него случайно выбираются вопросы в тест)
-REGISTRY_SIZE = 50
+# Размер реестра вопросов на класс (из него случайно выбираются вопросы в тест).
+# Устанавливаем достаточно большим, чтобы покрыть все уникальные вопросы
+# самого насыщенного класса (максимум ~186 для 9 класса).
+REGISTRY_SIZE = 200
 
 
 def get_class_from_source(source_file):
@@ -100,6 +104,8 @@ def get_class_from_source(source_file):
         return 9
     if "10kl" in s or "10_kl" in s or "vseobschaya_10" in s:
         return 10
+    if "11kl" in s or "11_kl" in s or "vseobschaya_11" in s:
+        return 11
     return None
 
 
@@ -466,9 +472,14 @@ def generate_placement_test(user_id=None, num_questions=None):
             if q["question"] not in seen_q:
                 seen_q.add(q["question"])
                 unique_qs.append(q)
-        random.shuffle(unique_qs)
-        # Реестр класса — до REGISTRY_SIZE уникальных вопросов
+        # Реестр класса — до REGISTRY_SIZE уникальных вопросов.
+        # Сортируем детерминированно (по тексту вопроса), чтобы реестр был
+        # стабильным: предвычисленные LLM-дистракторы всегда соответствуют
+        # вопросам реестра. Случайность вносится при выборе вопросов из
+        # реестра ниже.
+        unique_qs.sort(key=lambda q: q["question"])
         registry = unique_qs[:REGISTRY_SIZE]
+        random.shuffle(registry)
         for q in registry[:take]:
             questions.append((cls, q))
 
