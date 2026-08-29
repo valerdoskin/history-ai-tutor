@@ -525,21 +525,28 @@ def api_profile():
 def api_exam():
     """API для Web App: генерация задания ОГЭ/ЕГЭ."""
     exam_type = request.args.get("type", "oge")
+    qtype = request.args.get("qtype")
     user_id = request.args.get("user_id")
     try:
         classes = "all"
         if user_id and user_id != "null":
             classes = db.get_selected_classes(int(user_id))
         if exam_type == "ege":
-            question = exam_service.generate_ege_question(classes=classes)
+            question = exam_service.generate_ege_question(qtype=qtype, classes=classes)
         else:
-            question = exam_service.generate_oge_question(classes=classes)
+            question = exam_service.generate_oge_question(qtype=qtype, classes=classes)
         if user_id and user_id != "null":
             progress_service.record_activity(int(user_id))
         return jsonify(question)
     except Exception as e:
         logger.error(f"Ошибка генерации задания: {e}")
         return jsonify({"error": "Не удалось сгенерировать задание"}), 500
+
+
+@app.route("/api/exam/types", methods=["GET"])
+def api_exam_types():
+    """API для Web App: список типов вопросов и их соответствие заданиям ФИПИ."""
+    return jsonify({"types": exam_service.get_question_types()})
 
 
 @app.route("/api/topics", methods=["GET"])

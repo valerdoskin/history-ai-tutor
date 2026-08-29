@@ -216,6 +216,18 @@ body {
     line-height: 1.5;
 }
 
+.fipi-badge {
+    display: inline-block;
+    background: #e94560;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
 .options {
     display: flex;
     flex-direction: column;

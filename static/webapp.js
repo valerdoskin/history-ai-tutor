@@ -101,9 +101,11 @@ const practiceContent = document.getElementById('practice-content');
 
 practiceBtn.addEventListener('click', async () => {
     const examType = document.getElementById('exam-type').value;
+    const qtype = document.getElementById('exam-qtype').value;
     practiceContent.innerHTML = '<p class="hint">Генерация задания...</p>';
     try {
-        const resp = await fetch(`/api/exam?type=${examType}&user_id=${userId}`);
+        const qtypeParam = qtype ? `&qtype=${qtype}` : '';
+        const resp = await fetch(`/api/exam?type=${examType}&user_id=${userId}${qtypeParam}`);
         const data = await resp.json();
         renderQuestion(data);
     } catch (e) {
@@ -130,9 +132,11 @@ function renderQuestion(data) {
         practiceContent.innerHTML = '<p class="hint">Не удалось сгенерировать задание. Попробуй ещё раз.</p>';
         return;
     }
+    const fipiBadge = data.fipi_numbers && data.fipi_numbers.length
+        ? `<span class="fipi-badge">Задание ${data.fipi_numbers.join(', ')}</span>` : '';
     if (data.options) {
         // ОГЭ — выбор ответа
-        let html = `<div class="question">${data.question}</div><div class="options">`;
+        let html = `<div class="question">${fipiBadge}${data.question}</div><div class="options">`;
         data.options.forEach((opt, i) => {
             html += `<button class="option" data-idx="${i}" data-correct="${i === data.correct_index}">${i + 1}. ${opt}</button>`;
         });
@@ -158,7 +162,7 @@ function renderQuestion(data) {
     } else {
         // ЕГЭ — краткий ответ
         practiceContent.innerHTML = `
-            <div class="question">${data.question}</div>
+            <div class="question">${fipiBadge}${data.question}</div>
             <input type="text" id="ege-answer" placeholder="Введи ответ...">
             <button class="btn-primary" id="ege-check">Проверить</button>
             <div class="explanation" id="explanation"></div>
