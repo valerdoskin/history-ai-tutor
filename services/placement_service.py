@@ -10,14 +10,38 @@
 используется генерация через exam_service (LLM) как fallback.
 """
 
+import json
 import logging
+import os
 import random
 import time
+
+import numpy as np
 
 from database import db
 from services import exam_service, knowledge_service
 
 logger = logging.getLogger(__name__)
+
+# Путь к предвычисленным embeddings вопросов (см. scripts/build_question_embeddings.py)
+_QUESTION_EMB_NPY = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "question_embeddings.npy",
+)
+_QUESTION_EMB_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "question_embeddings.json",
+)
+_ANSWER_EMB_NPY = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "answer_embeddings.npy",
+)
+
+# Кэш embeddings вопросов: {"questions": [...], "vecs": np.ndarray}
+_question_emb_cache = None
 
 # Кэш сгенерированных тестов: user_id -> {"questions": [...], "expires": ts}
 _test_cache = {}
@@ -154,6 +178,145 @@ def _build_mcq_with_distractors(question, answer, distractors):
     }
 
 
+def _load_question_embeddings():
+    """Загружает предвычисленные embeddings вопросов и ответов (с кэшем).
+
+    Возвращает (questions, qvecs, avecs) или (None, None, None), если файлы
+    отсутствуют.
+    """
+    global _question_emb_cache
+    if _question_emb_cache is not None:
+        return (
+            _question_emb_cache["questions"],
+            _question_emb_cache["qvecs"],
+            _question_emb_cache["avecs"],
+        )
+    if not (
+        os.path.exists(_QUESTION_EMB_NPY)
+        and os.path.exists(_QUESTION_EMB_JSON)
+        and os.path.exists(_ANSWER_EMB_NPY)
+    ):
+        return None, None, None
+    try:
+        questions = json.load(open(_QUESTION_EMB_JSON, encoding="utf-8"))
+        qvecs = np.load(_QUESTION_EMB_NPY)
+        avecs = np.load(_ANSWER_EMB_NPY)
+        _question_emb_cache = {
+            "questions": questions,
+            "qvecs": qvecs,
+            "avecs": avecs,
+        }
+        return questions, qvecs, avecs
+    except Exception as e:
+        logger.error(f"Не удалось загрузить embeddings вопросов: {e}")
+        return None, None, None
+
+
+def _semantic_distractors(question, cls, n=3):
+    """Подбирает n семантически близких дистракторов для вопроса.
+
+    Использует предвычисленные embeddings ответов: выбирает ответы,
+    наиболее близкие к правильному ответу (косинусная близость), исключая
+    сам ответ. Это даёт логичные дистракторы — ответы на похожие вопросы
+    (например, про других правителей/основателей государств).
+    """
+    questions, qvecs, avecs = _load_question_embeddings()
+    if questions is None:
+        return None
+    try:
+        idx = next(
+            (i for i, q in enumerate(questions) if q["question"] == question),
+            None,
+        )
+        if idx is None:
+            return None
+        avec = avecs[idx]
+        # Косинусная близость ответов (векторы нормализованы)
+        sims = avecs @ avec
+        order = np.argsort(-sims)
+        distractors = []
+        used = {questions[idx]["answer"]}
+        # Сначала ответы того же класса, затем остальные
+        same_class = [i for i in order if questions[i]["class"] == cls]
+        other_class = [i for i in order if questions[i]["class"] != cls]
+        for i in same_class + other_class:
+            if len(distractors) >= n:
+                break
+            if i == idx:
+                continue
+            ans = questions[i]["answer"]
+            if ans in used:
+                continue
+            distractors.append(ans)
+            used.add(ans)
+        return distractors
+    except Exception as e:
+        logger.error(f"Ошибка подбора семантических дистракторов: {e}")
+        return None
+
+
+def _fallback_distractors(q, cls, classes, n=3):
+    """Fallback-подбор дистракторов по параграфу/классу (без embeddings).
+
+    Приоритет: тот же параграф -> тот же класс -> другие классы.
+    """
+    distractors = []
+    used = {q["answer"]}
+    # Собираем пул ответов по параграфам для всех классов
+    answers_by_class = {}
+    for c in classes:
+        qs = _get_exam_questions_for_class(c)
+        by_para = {}
+        for qq in qs:
+            by_para.setdefault(qq.get("paragraph", ""), []).append(qq["answer"])
+        answers_by_class[c] = by_para
+
+    para = q.get("paragraph", "")
+    # 1) Тот же параграф
+    same_para = [
+        a for a in answers_by_class.get(cls, {}).get(para, [])
+        if a != q["answer"]
+    ]
+    random.shuffle(same_para)
+    for a in same_para:
+        if len(distractors) >= n:
+            break
+        if a not in used:
+            distractors.append(a)
+            used.add(a)
+    # 2) Тот же класс (другие параграфы)
+    if len(distractors) < n:
+        same_class = [
+            a for ans in answers_by_class.get(cls, {}).values()
+            for a in ans
+            if a != q["answer"]
+        ]
+        random.shuffle(same_class)
+        for a in same_class:
+            if len(distractors) >= n:
+                break
+            if a not in used:
+                distractors.append(a)
+                used.add(a)
+    # 3) Другие классы
+    if len(distractors) < n:
+        other = [
+            a for c, by_para in answers_by_class.items()
+            if c != cls
+            for ans in by_para.values()
+            for a in ans
+            if a != q["answer"]
+        ]
+        random.shuffle(other)
+        for a in other:
+            if len(distractors) >= n:
+                break
+            if a not in used:
+                distractors.append(a)
+                used.add(a)
+    return distractors
+
+
 def _questions_per_class(num_classes):
     """Возвращает количество вопросов на класс для заданного числа классов."""
     lo, hi = QUESTIONS_PER_CLASS_BY_COUNT.get(num_classes, (3, 4))
@@ -207,63 +370,14 @@ def generate_placement_test(user_id=None, num_questions=None):
             questions.append((cls, q))
 
     # Строим MCQ с дистракторами, тематически связанными с вопросом.
-    # Приоритет: тот же параграф -> тот же класс -> другие классы.
-    # Для каждого класса собираем пул ответов по параграфам.
-    answers_by_class = {}
-    for cls in classes:
-        qs = _get_exam_questions_for_class(cls)
-        by_para = {}
-        for q in qs:
-            by_para.setdefault(q.get("paragraph", ""), []).append(q["answer"])
-        answers_by_class[cls] = by_para
-
+    # Основной способ — семантический подбор по embeddings вопросов
+    # (наиболее близкие по смыслу вопросы). Если embeddings недоступны —
+    # fallback на подбор по параграфу/классу.
     result = []
     for i, (cls, q) in enumerate(questions):
-        para = q.get("paragraph", "")
-        distractors = []
-        used = {q["answer"]}
-        # 1) Дистракторы из того же параграфа
-        same_para = [
-            a for a in answers_by_class.get(cls, {}).get(para, [])
-            if a != q["answer"]
-        ]
-        random.shuffle(same_para)
-        for a in same_para:
-            if len(distractors) >= 3:
-                break
-            if a not in used:
-                distractors.append(a)
-                used.add(a)
-        # 2) Добираем из того же класса (другие параграфы)
-        if len(distractors) < 3:
-            same_class = [
-                a for ans in answers_by_class.get(cls, {}).values()
-                for a in ans
-                if a != q["answer"]
-            ]
-            random.shuffle(same_class)
-            for a in same_class:
-                if len(distractors) >= 3:
-                    break
-                if a not in used:
-                    distractors.append(a)
-                    used.add(a)
-        # 3) Если всё ещё не хватило — из других классов
-        if len(distractors) < 3:
-            other = [
-                a for c, by_para in answers_by_class.items()
-                if c != cls
-                for ans in by_para.values()
-                for a in ans
-                if a != q["answer"]
-            ]
-            random.shuffle(other)
-            for a in other:
-                if len(distractors) >= 3:
-                    break
-                if a not in used:
-                    distractors.append(a)
-                    used.add(a)
+        distractors = _semantic_distractors(q["question"], cls, n=3)
+        if distractors is None:
+            distractors = _fallback_distractors(q, cls, classes)
         mcq = _build_mcq_with_distractors(q["question"], q["answer"], distractors)
         mcq["id"] = i
         mcq["class"] = cls
