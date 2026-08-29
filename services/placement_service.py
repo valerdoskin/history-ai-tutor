@@ -87,7 +87,12 @@ def _parse_selected_classes(selected):
 
 
 def _get_exam_questions_for_class(cls):
-    """Собирает готовые exam_questions из чанков указанного класса."""
+    """Собирает готовые exam_questions из чанков указанного класса.
+
+    Возвращает список dict: {"question", "answer", "paragraph"}.
+    paragraph — заголовок параграфа, из которого взят вопрос (для подбора
+    тематически связанных дистракторов).
+    """
     chunks = knowledge_service._load_chunks()
     questions = []
     for ch in chunks:
@@ -96,11 +101,16 @@ def _get_exam_questions_for_class(cls):
         meta = ch.get("metadata") or {}
         if isinstance(meta, list):
             meta = {"dates": meta}
+        paragraph = str(ch.get("paragraph_title", "")).strip()
         for q in meta.get("exam_questions", []):
             question = str(q.get("question", "")).strip()
             answer = str(q.get("answer", "")).strip()
             if question and answer:
-                questions.append({"question": question, "answer": answer})
+                questions.append({
+                    "question": question,
+                    "answer": answer,
+                    "paragraph": paragraph,
+                })
     return questions
 
 
@@ -181,12 +191,64 @@ def generate_placement_test(user_id=None, num_questions=10):
     # Ограничиваем до num_questions
     questions = questions[:num_questions]
 
-    # Строим MCQ с дистракторами из других вопросов
-    all_answers = [q["answer"] for _, q in questions]
+    # Строим MCQ с дистракторами, тематически связанными с вопросом.
+    # Приоритет: тот же параграф -> тот же класс -> другие классы.
+    # Для каждого класса собираем пул ответов по параграфам.
+    answers_by_class = {}
+    for cls in classes:
+        qs = _get_exam_questions_for_class(cls)
+        by_para = {}
+        for q in qs:
+            by_para.setdefault(q.get("paragraph", ""), []).append(q["answer"])
+        answers_by_class[cls] = by_para
+
     result = []
     for i, (cls, q) in enumerate(questions):
-        distractors = [a for a in all_answers if a != q["answer"]]
-        random.shuffle(distractors)
+        para = q.get("paragraph", "")
+        distractors = []
+        used = {q["answer"]}
+        # 1) Дистракторы из того же параграфа
+        same_para = [
+            a for a in answers_by_class.get(cls, {}).get(para, [])
+            if a != q["answer"]
+        ]
+        random.shuffle(same_para)
+        for a in same_para:
+            if len(distractors) >= 3:
+                break
+            if a not in used:
+                distractors.append(a)
+                used.add(a)
+        # 2) Добираем из того же класса (другие параграфы)
+        if len(distractors) < 3:
+            same_class = [
+                a for ans in answers_by_class.get(cls, {}).values()
+                for a in ans
+                if a != q["answer"]
+            ]
+            random.shuffle(same_class)
+            for a in same_class:
+                if len(distractors) >= 3:
+                    break
+                if a not in used:
+                    distractors.append(a)
+                    used.add(a)
+        # 3) Если всё ещё не хватило — из других классов
+        if len(distractors) < 3:
+            other = [
+                a for c, by_para in answers_by_class.items()
+                if c != cls
+                for ans in by_para.values()
+                for a in ans
+                if a != q["answer"]
+            ]
+            random.shuffle(other)
+            for a in other:
+                if len(distractors) >= 3:
+                    break
+                if a not in used:
+                    distractors.append(a)
+                    used.add(a)
         mcq = _build_mcq_with_distractors(q["question"], q["answer"], distractors)
         mcq["id"] = i
         mcq["class"] = cls
