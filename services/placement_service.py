@@ -19,7 +19,7 @@ import time
 import numpy as np
 
 from database import db
-from services import exam_service, knowledge_service
+from services import exam_service, knowledge_service, llm_service
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +39,18 @@ _ANSWER_EMB_NPY = os.path.join(
     "knowledge",
     "answer_embeddings.npy",
 )
+# Кэш LLM-дистракторов: {вопрос: [дистрактор1, дистрактор2, дистрактор3]}
+_LLM_DISTRACTORS_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "llm_distractors.json",
+)
 
 # Кэш embeddings вопросов: {"questions": [...], "vecs": np.ndarray}
 _question_emb_cache = None
+
+# Кэш LLM-дистракторов (в памяти): {вопрос: [дистракторы]}
+_llm_distractors_cache = None
 
 # Кэш сгенерированных тестов: user_id -> {"questions": [...], "expires": ts}
 _test_cache = {}
@@ -213,12 +222,13 @@ def _load_question_embeddings():
 
 
 def _semantic_distractors(question, cls, n=3):
-    """Подбирает n семантически близких дистракторов для вопроса.
+    """Подбирает n логичных дистракторов для вопроса.
 
-    Использует предвычисленные embeddings ответов: выбирает ответы,
-    наиболее близкие к правильному ответу (косинусная близость), исключая
-    сам ответ. Это даёт логичные дистракторы — ответы на похожие вопросы
-    (например, про других правителей/основателей государств).
+    Использует предвычисленные embeddings ответов. Сначала выбирает ответы
+    на вопросы с тем же вопросительным словом (например, «Каковы итоги…» →
+    итоги других событий, «Кто…» → другие личности), семантически близкие
+    к правильному ответу. Если не хватает, дополняет семантически близкими
+    ответами из всех вопросов.
     """
     questions, qvecs, avecs = _load_question_embeddings()
     if questions is None:
@@ -234,24 +244,117 @@ def _semantic_distractors(question, cls, n=3):
         # Косинусная близость ответов (векторы нормализованы)
         sims = avecs @ avec
         order = np.argsort(-sims)
+        first_word = question.split()[0] if question.split() else ""
         distractors = []
         used = {questions[idx]["answer"]}
-        # Сначала ответы того же класса, затем остальные
-        same_class = [i for i in order if questions[i]["class"] == cls]
-        other_class = [i for i in order if questions[i]["class"] != cls]
-        for i in same_class + other_class:
-            if len(distractors) >= n:
-                break
-            if i == idx:
-                continue
-            ans = questions[i]["answer"]
-            if ans in used:
-                continue
-            distractors.append(ans)
-            used.add(ans)
+
+        def _collect(candidates):
+            for i in candidates:
+                if len(distractors) >= n:
+                    break
+                if i == idx:
+                    continue
+                ans = questions[i]["answer"]
+                if ans in used:
+                    continue
+                distractors.append(ans)
+                used.add(ans)
+
+        # 1) Вопросы с тем же вопросительным словом, семантически близкие
+        #    (по всем классам, отсортированные по близости)
+        same_word = [
+            i
+            for i in order
+            if questions[i]["question"].split()[0] == first_word
+        ]
+        _collect(same_word)
+        # 2) Дополняем семантически близкими из всех вопросов
+        if len(distractors) < n:
+            _collect(order)
         return distractors
     except Exception as e:
         logger.error(f"Ошибка подбора семантических дистракторов: {e}")
+        return None
+
+
+def _load_llm_distractors_cache():
+    """Загружает кэш LLM-дистракторов из файла (с кэшем в памяти)."""
+    global _llm_distractors_cache
+    if _llm_distractors_cache is not None:
+        return _llm_distractors_cache
+    cache = {}
+    if os.path.exists(_LLM_DISTRACTORS_JSON):
+        try:
+            cache = json.load(open(_LLM_DISTRACTORS_JSON, encoding="utf-8"))
+        except Exception as e:
+            logger.error(f"Не удалось загрузить кэш LLM-дистракторов: {e}")
+    _llm_distractors_cache = cache
+    return cache
+
+
+def _save_llm_distractors_cache():
+    """Сохраняет кэш LLM-дистракторов в файл."""
+    global _llm_distractors_cache
+    if _llm_distractors_cache is None:
+        return
+    try:
+        with open(_LLM_DISTRACTORS_JSON, "w", encoding="utf-8") as f:
+            json.dump(_llm_distractors_cache, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Не удалось сохранить кэш LLM-дистракторов: {e}")
+
+
+def _llm_distractors(question, answer, n=3):
+    """Генерирует логичные дистракторы через LLM (с кэшированием).
+
+    Возвращает список из n правдоподобных, но неправильных вариантов,
+    тематически связанных с вопросом и правильным ответом. Результат
+    кэшируется в файле, чтобы не генерировать повторно для тех же вопросов.
+    """
+    cache = _load_llm_distractors_cache()
+    if question in cache and len(cache[question]) >= n:
+        return cache[question][:n]
+    try:
+        res = llm_service.call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        "Ты — эксперт по истории. Сгенерируй "
+                        f"{n} правдоподобных, но НЕПРАВИЛЬНЫХ варианта ответа "
+                        "(дистрактора) для тестового вопроса. Они должны быть "
+                        "тематически связаны с вопросом и правильным ответом, "
+                        "но содержательно неверны. Не повторяй правильный ответ. "
+                        "Верни JSON-массив из строк."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"Вопрос: {question}\nПравильный ответ: {answer}",
+                },
+            ],
+            json_mode=True,
+            max_tokens=600,
+        )
+        if not isinstance(res, list):
+            res = [res]
+        distractors = [str(x).strip() for x in res if str(x).strip()]
+        # Убираем дубликаты и совпадения с правильным ответом
+        seen = set()
+        clean = []
+        for d in distractors:
+            if d in seen or d == answer:
+                continue
+            seen.add(d)
+            clean.append(d)
+        clean = clean[:n]
+        if len(clean) >= n:
+            cache[question] = clean
+            _save_llm_distractors_cache()
+            return clean
+        return None
+    except Exception as e:
+        logger.error(f"Ошибка генерации LLM-дистракторов: {e}")
         return None
 
 
@@ -370,12 +473,15 @@ def generate_placement_test(user_id=None, num_questions=None):
             questions.append((cls, q))
 
     # Строим MCQ с дистракторами, тематически связанными с вопросом.
-    # Основной способ — семантический подбор по embeddings вопросов
-    # (наиболее близкие по смыслу вопросы). Если embeddings недоступны —
-    # fallback на подбор по параграфу/классу.
+    # Основной способ — генерация логичных дистракторов через LLM
+    # (с кэшированием). Если LLM недоступен — семантический подбор по
+    # embeddings вопросов. Если embeddings недоступны — fallback на подбор
+    # по параграфу/классу.
     result = []
     for i, (cls, q) in enumerate(questions):
-        distractors = _semantic_distractors(q["question"], cls, n=3)
+        distractors = _llm_distractors(q["question"], q["answer"], n=3)
+        if distractors is None:
+            distractors = _semantic_distractors(q["question"], cls, n=3)
         if distractors is None:
             distractors = _fallback_distractors(q, cls, classes)
         mcq = _build_mcq_with_distractors(q["question"], q["answer"], distractors)
