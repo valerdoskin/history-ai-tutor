@@ -534,7 +534,9 @@ def check_placement_test(user_id, answers):
     Проверяет ответы на тест уровня по закэшированному тесту.
 
     answers — список dict: {"question_id": int, "answer_index": int}.
-    Возвращает dict: {score, total, level, rank}.
+    Возвращает dict: {score, total, level, rank, details}.
+    details — список разбора по каждому вопросу:
+        {question, options, correct_index, user_index, correct}.
     """
     questions = _get_cached_test(user_id) if user_id else None
     if not questions:
@@ -543,10 +545,22 @@ def check_placement_test(user_id, answers):
     by_id = {q["id"]: q for q in questions}
     score = 0
     total = len(answers)
+    details = []
     for a in answers:
         q = by_id.get(a.get("question_id"))
-        if q and a.get("answer_index") == q.get("correct_index"):
+        if not q:
+            continue
+        user_index = a.get("answer_index")
+        correct = user_index == q.get("correct_index")
+        if correct:
             score += 1
+        details.append({
+            "question": q.get("question"),
+            "options": q.get("options", []),
+            "correct_index": q.get("correct_index"),
+            "user_index": user_index,
+            "correct": correct,
+        })
 
     level = _score_to_level(score, total)
     return {
@@ -554,6 +568,7 @@ def check_placement_test(user_id, answers):
         "total": total,
         "level": level,
         "rank": _level_to_rank(level),
+        "details": details,
     }
 
 

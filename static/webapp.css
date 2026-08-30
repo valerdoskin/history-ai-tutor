@@ -675,6 +675,50 @@ body {
     color: #e94560;
 }
 
+.placement-details {
+    margin-top: 20px;
+    text-align: left;
+}
+
+.placement-details h4 {
+    color: #eee;
+    margin: 0 0 12px;
+    font-size: 16px;
+}
+
+.placement-detail {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+}
+
+.placement-detail-q {
+    color: #eee;
+    font-size: 14px;
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.placement-detail-user {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.placement-detail-user.correct {
+    color: #4caf50;
+}
+
+.placement-detail-user.wrong {
+    color: #e94560;
+}
+
+.placement-detail-correct {
+    color: #4caf50;
+    font-size: 13px;
+}
+
 /* ============================================================
    Полноценный тест (10 заданий)
    ============================================================ */

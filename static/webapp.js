@@ -796,6 +796,21 @@ async function submitPlacement() {
             content.innerHTML = `<p class="hint">${data.error}</p>`;
             return;
         }
+        const details = (data.details || []).map((d, i) => {
+            const correctOpt = d.options[d.correct_index] || '';
+            const userOpt = (d.user_index != null && d.options[d.user_index]) ? d.options[d.user_index] : '—';
+            const mark = d.correct ? '✅' : '❌';
+            const userLine = d.correct
+                ? `<div class="placement-detail-user correct">Ваш ответ: ${userOpt}</div>`
+                : `<div class="placement-detail-user wrong">Ваш ответ: ${userOpt}</div>
+                   <div class="placement-detail-correct">Правильный ответ: ${correctOpt}</div>`;
+            return `
+                <div class="placement-detail">
+                    <div class="placement-detail-q">${mark} ${i + 1}. ${d.question}</div>
+                    ${userLine}
+                </div>
+            `;
+        }).join('');
         content.innerHTML = `
             <div class="placement-result">
                 <h3>🎉 Тест уровня пройден!</h3>
@@ -803,6 +818,7 @@ async function submitPlacement() {
                 <div class="placement-level">Твой уровень: <strong>${data.level}</strong> (${data.rank})</div>
                 <p class="hint">Мы подберём задания под твой уровень знаний.</p>
             </div>
+            ${details ? `<div class="placement-details"><h4>Разбор ответов</h4>${details}</div>` : ''}
         `;
     } catch (e) {
         content.innerHTML = '<p class="hint">Ошибка проверки теста.</p>';

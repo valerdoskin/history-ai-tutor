@@ -242,20 +242,52 @@ async def _send_placement_question(message, context):
 
 
 async def _finish_placement(message, context):
-    """Завершает тест уровня и показывает результат."""
+    """Завершает тест уровня и показывает результат с разбором ответов."""
     user_id = message.from_user.id
     answers = context.user_data.get("placement_answers", [])
     result = placement_service.submit_placement(user_id, answers)
     if "error" in result:
         await message.reply_text(result["error"])
         return
-    await message.reply_text(
+
+    text = (
         f"🎉 *Тест уровня пройден!*\n\n"
         f"Правильных ответов: {result['score']} из {result['total']}\n"
         f"Твой уровень: *{result['level']}* ({result['rank']})\n\n"
-        f"Мы подберём задания под твой уровень знаний!",
-        parse_mode="Markdown",
+        f"Мы подберём задания под твой уровень знаний!"
     )
+    await message.reply_text(text, parse_mode="Markdown")
+
+    # Разбор ответов
+    details = result.get("details", [])
+    if not details:
+        return
+    lines = ["📋 *Разбор ответов:*"]
+    for i, d in enumerate(details, 1):
+        mark = "✅" if d.get("correct") else "❌"
+        lines.append(f"\n{mark} *{i}. {d.get('question', '')}*")
+        user_idx = d.get("user_index")
+        user_opt = (
+            d["options"][user_idx] if user_idx is not None and user_idx < len(d["options"]) else "—"
+        )
+        correct_opt = d["options"][d.get("correct_index")] if d.get("correct_index") is not None else "—"
+        if d.get("correct"):
+            lines.append(f"Ваш ответ: {user_opt}")
+        else:
+            lines.append(f"Ваш ответ: {user_opt}")
+            lines.append(f"Правильный ответ: {correct_opt}")
+    # Telegram ограничивает длину сообщения ~4096 символов — шлём частями
+    chunk = []
+    chunk_len = 0
+    for line in lines:
+        if chunk_len + len(line) + 1 > 4000 and chunk:
+            await message.reply_text("\n".join(chunk), parse_mode="Markdown")
+            chunk = []
+            chunk_len = 0
+        chunk.append(line)
+        chunk_len += len(line) + 1
+    if chunk:
+        await message.reply_text("\n".join(chunk), parse_mode="Markdown")
 
 
 # ============================================================
