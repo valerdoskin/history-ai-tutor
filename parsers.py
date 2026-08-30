@@ -275,6 +275,35 @@ class Parser10KlassVseobschaya(BaseDocxParser):
         (текст главы) или на параграфе (§).
     """
 
+    def is_paragraph_heading(self, paragraph) -> bool:
+        """Проверяет, является ли параграф заголовком параграфа (§).
+
+        В этой книге настоящие параграфы — Heading 2 с «§». Heading 3
+        используется для колонтитула-разделителя «МИР РОССИЯ», который
+        НЕ является началом параграфа (обрабатывается как sync_table).
+        """
+        text = paragraph.text.strip()
+        # «иТоГи ГЛАВы» — это итоги главы, а не параграф
+        if re.match(r"^иТоГи\s+ГЛАВы", text, re.IGNORECASE):
+            return False
+        # Heading 3 — колонтитул-разделитель «МИР РОССИЯ», не параграф
+        if paragraph.style.name == "Heading 3":
+            return False
+        # Настоящие параграфы — Heading 2 с «§»
+        if paragraph.style.name == "Heading 2" and text.startswith("§"):
+            return True
+        return False
+
+    def is_noise_line(self, text: str) -> bool:
+        """Отфильтровывает колонтитулы-разделители «МИР» и «РОССИЯ».
+
+        В этой книге «МИР» и «РОССИЯ» (отдельные Heading 3) — это
+        колонтитулы-разделители, которые не должны попадать в текст.
+        """
+        if re.match(r"^\s*МИР\s*$", text) or re.match(r"^\s*РОССИЯ\s*$", text):
+            return True
+        return super().is_noise_line(text)
+
     def is_chapter_start(self, text: str) -> bool:
         # «ГЛАВА    НАЗВАНИЕ» (название на той же строке).
         m = re.match(r"^\s*ГЛАВА\s+(.+)$", text)
