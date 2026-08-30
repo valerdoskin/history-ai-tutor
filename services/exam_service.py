@@ -2,9 +2,9 @@
 Сервис практики ОГЭ/ЕГЭ: генерация заданий по формату ФИПИ.
 
 Поддерживает два режима:
-1. Генерация из классифицированного реестра вопросов (основной, быстрый):
-   вопросы берутся из knowledge/question_types.json, дистракторы — из кэша
-   LLM-дистракторов. Не требует обращения к LLM на лету.
+1. Генерация из банка вопросов (основной, быстрый):
+   вопросы и дистракторы берутся из knowledge/question_bank.json.
+   Не требует обращения к LLM на лету.
 2. Генерация через LLM (fallback, медленный): вопросы генерируются
    моделью на основе RAG-контекста.
 
@@ -27,14 +27,14 @@ from services import llm_service, placement_service, rag_service
 
 logger = logging.getLogger(__name__)
 
-# Путь к классифицированным вопросам реестра
-_QUESTION_TYPES_JSON = os.path.join(
+# Путь к банку вопросов
+_QUESTION_BANK_JSON = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "knowledge",
-    "question_types.json",
+    "question_bank.json",
 )
 
-# Кэш классифицированных вопросов: {вопрос: {class, answer, type}}
+# Кэш банка вопросов: {вопрос: {class, answer, type, distractors}}
 _question_types_cache = None
 
 # Типы заданий по формату ФИПИ (для LLM-режима)
@@ -65,16 +65,16 @@ TYPE_TO_FIPI = {
 
 
 def _load_question_types():
-    """Загружает классифицированные вопросы реестра (с кэшем)."""
+    """Загружает банк вопросов (с кэшем)."""
     global _question_types_cache
     if _question_types_cache is not None:
         return _question_types_cache
     cache = {}
-    if os.path.exists(_QUESTION_TYPES_JSON):
+    if os.path.exists(_QUESTION_BANK_JSON):
         try:
-            cache = json.load(open(_QUESTION_TYPES_JSON, encoding="utf-8"))
+            cache = json.load(open(_QUESTION_BANK_JSON, encoding="utf-8"))
         except Exception as e:
-            logger.error(f"Не удалось загрузить классификацию вопросов: {e}")
+            logger.error(f"Не удалось загрузить банк вопросов: {e}")
     _question_types_cache = cache
     return cache
 
@@ -113,9 +113,9 @@ def _parse_classes(classes):
 
 
 def _registry_questions(qtype=None, classes=None):
-    """Возвращает список вопросов реестра, отфильтрованных по типу и классам.
+    """Возвращает список вопросов банка, отфильтрованных по типу и классам.
 
-    Каждый элемент: {"question", "answer", "class", "type"}.
+    Каждый элемент: {"question", "answer", "class", "type", "distractors"}.
     """
     data = _load_question_types()
     if not data:
@@ -132,6 +132,7 @@ def _registry_questions(qtype=None, classes=None):
             "answer": info.get("answer", ""),
             "class": info.get("class"),
             "type": info.get("type"),
+            "distractors": info.get("distractors", []),
         })
     return result
 
@@ -160,7 +161,9 @@ def generate_oge_question_from_registry(qtype=None, classes=None):
     if not questions:
         return None
     q = random.choice(questions)
-    distractors = placement_service._llm_distractors(q["question"], q["answer"], n=3)
+    distractors = q.get("distractors") or []
+    if len(distractors) < 3:
+        distractors = placement_service._llm_distractors(q["question"], q["answer"], n=3)
     if distractors is None:
         distractors = placement_service._semantic_distractors(q["question"], q["class"], n=3)
     if distractors is None:
@@ -289,3 +292,270 @@ def check_oge_answer(question, user_answer, correct_index, options):
 def check_ege_answer(user_answer, correct_answer):
     """Проверяет ответ на задание ЕГЭ (краткий ответ)."""
     return user_answer.strip().lower() == correct_answer.strip().lower()
+
+
+# ============================================================
+# Полноценный тест (10 заданий) по формату ФИПИ
+# ============================================================
+
+# Путь к реестру вопросов по источникам
+_SOURCE_QUESTIONS_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "source_questions.json",
+)
+
+# Кэш реестра вопросов по источникам
+_source_questions_cache = None
+
+# Баллы ФИПИ для типов заданий (по спецификациям ЕГЭ/ОГЭ)
+FIPI_POINTS = {
+    "mcq": 1,          # выбор ответа (ОГЭ 1-17)
+    "short": 2,        # краткий ответ (ЕГЭ 3-6)
+    "source": 3,       # развёрнутый ответ по источнику (ЕГЭ 17-21)
+    "open": 3,         # развёрнутый ответ (ЕГЭ 20-21)
+}
+
+# Структура полноценного теста: 10 заданий
+# (гибрид ЕГЭ/ОГЭ: MCQ, краткий ответ, развёрнутый ответ по источнику)
+TEST_STRUCTURE = [
+    {"type": "mcq", "count": 4, "points": FIPI_POINTS["mcq"]},
+    {"type": "short", "count": 4, "points": FIPI_POINTS["short"]},
+    {"type": "source", "count": 2, "points": FIPI_POINTS["source"]},
+]
+
+
+def _load_source_questions():
+    """Загружает реестр вопросов по источникам (с кэшем).
+
+    Возвращает список dict: {"source_text", "source_title", "class",
+    "source_file", "questions": [{"question", "answer", "type"}]}.
+    """
+    global _source_questions_cache
+    if _source_questions_cache is not None:
+        return _source_questions_cache
+    cache = []
+    if os.path.exists(_SOURCE_QUESTIONS_JSON):
+        try:
+            data = json.load(open(_SOURCE_QUESTIONS_JSON, encoding="utf-8"))
+            for key, info in data.items():
+                cache.append({
+                    "source_text": info.get("source_text", ""),
+                    "source_title": info.get("source_title", ""),
+                    "class": info.get("class"),
+                    "source_file": info.get("source_file", ""),
+                    "questions": info.get("questions", []),
+                })
+        except Exception as e:
+            logger.error(f"Не удалось загрузить реестр вопросов по источникам: {e}")
+    _source_questions_cache = cache
+    return cache
+
+
+def _source_questions_for_class(classes):
+    """Возвращает вопросы по источникам, отфильтрованные по классам."""
+    sources = _load_source_questions()
+    classes = _parse_classes(classes)
+    result = []
+    for src in sources:
+        if classes != "all" and src.get("class") not in classes:
+            continue
+        for q in src.get("questions", []):
+            result.append({
+                "question": q.get("question", ""),
+                "answer": q.get("answer", ""),
+                "type": "source",
+                "class": src.get("class"),
+                "source_text": src.get("source_text", ""),
+                "source_title": src.get("source_title", ""),
+            })
+    return result
+
+
+def _build_source_task(classes):
+    """Собирает задание по источнику (гибрид: реестр + база знаний).
+
+    Берёт вопрос из реестра source_questions.json. Если реестр пуст —
+    извлекает источник из базы знаний и генерирует вопрос через LLM.
+    """
+    questions = _source_questions_for_class(classes)
+    if questions:
+        q = random.choice(questions)
+        return {
+            "type": "source",
+            "question": q["question"],
+            "answer": q["answer"],
+            "points": FIPI_POINTS["source"],
+            "class": q["class"],
+            "source_text": q["source_text"],
+            "source_title": q["source_title"],
+            "fipi_numbers": [17, 18, 19, 20, 21],
+        }
+    # Fallback: извлечь источник из базы знаний и сгенерировать вопрос через LLM
+    return _generate_source_task_llm(classes)
+
+
+def _generate_source_task_llm(classes):
+    """Генерирует задание по источнику через LLM (fallback)."""
+    try:
+        context = _get_context("исторический источник", class_filter=classes)
+        system_prompt = (
+            "Ты — составитель заданий ЕГЭ по истории по формату ФИПИ. "
+            "Составь задание на работу с историческим источником на основе контекста. "
+            "Верни ТОЛЬКО JSON без пояснений в формате: "
+            '{"question": "...", "answer": "...", "source_text": "...", "source_title": "..."}'
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"КОНТЕКСТ:\n{context}\n\nСоставь задание по источнику."},
+        ]
+        result = _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
+        if result.get("question") and result.get("answer"):
+            return {
+                "type": "source",
+                "question": result["question"],
+                "answer": result["answer"],
+                "points": FIPI_POINTS["source"],
+                "class": None,
+                "source_text": result.get("source_text", ""),
+                "source_title": result.get("source_title", ""),
+                "fipi_numbers": [17, 18, 19, 20, 21],
+            }
+    except Exception as e:
+        logger.error(f"Ошибка генерации задания по источнику: {e}")
+    return None
+
+
+def generate_full_test(classes=None):
+    """Генерирует полноценный тест из 10 заданий по формату ФИПИ.
+
+    Смесь типов: MCQ (выбор ответа), краткий ответ, развёрнутый ответ
+    по источнику. Каждое задание имеет балл по спецификации ФИПИ.
+
+    Возвращает dict: {"test_id", "questions": [...], "total_points"}.
+    """
+    classes = _parse_classes(classes)
+    questions = []
+
+    # MCQ (выбор ответа) — из банка вопросов question_bank.json
+    mcq_types = ["fact", "chronology", "cause_effect", "understanding", "comparison", "term"]
+    for _ in range(TEST_STRUCTURE[0]["count"]):
+        qtype = random.choice(mcq_types)
+        mcq = generate_oge_question_from_registry(qtype=qtype, classes=classes)
+        if mcq:
+            mcq["type"] = "mcq"
+            mcq["points"] = TEST_STRUCTURE[0]["points"]
+            questions.append(mcq)
+
+    # Краткий ответ — из банка вопросов question_bank.json
+    for _ in range(TEST_STRUCTURE[1]["count"]):
+        qtype = random.choice(mcq_types)
+        short = generate_ege_question_from_registry(qtype=qtype, classes=classes)
+        if short:
+            short["type"] = "short"
+            short["points"] = TEST_STRUCTURE[1]["points"]
+            questions.append(short)
+
+    # Развёрнутый ответ по источнику — из реестра source_questions.json
+    for _ in range(TEST_STRUCTURE[2]["count"]):
+        src = _build_source_task(classes)
+        if src:
+            questions.append(src)
+
+    # Если каких-то заданий не хватило (пустой реестр) — добираем из других типов
+    if len(questions) < 10:
+        for qtype in mcq_types:
+            if len(questions) >= 10:
+                break
+            mcq = generate_oge_question_from_registry(qtype=qtype, classes=classes)
+            if mcq:
+                mcq["type"] = "mcq"
+                mcq["points"] = TEST_STRUCTURE[0]["points"]
+                questions.append(mcq)
+
+    # Перемешиваем вопросы
+    random.shuffle(questions)
+
+    total_points = sum(q.get("points", 0) for q in questions)
+    return {
+        "test_id": f"test_{random.randint(100000, 999999)}",
+        "questions": questions,
+        "total_points": total_points,
+    }
+
+
+def check_open_answer(question, user_answer, reference):
+    """Проверяет развёрнутый ответ через LLM по критериям ФИПИ.
+
+    Критерии: полнота, точность, соответствие эталону из базы знаний.
+
+    Возвращает dict: {"correct": bool, "score": int, "max_score": int,
+    "feedback": str}.
+    """
+    if not user_answer or not user_answer.strip():
+        return {
+            "correct": False,
+            "score": 0,
+            "max_score": 3,
+            "feedback": "Ответ не введён.",
+        }
+    try:
+        system_prompt = (
+            "Ты — эксперт ЕГЭ по истории. Проверь развёрнутый ответ ученика "
+            "на задание по историческому источнику. Оцени по критериям ФИПИ: "
+            "полнота, точность, соответствие эталону. "
+            "Верни ТОЛЬКО JSON без пояснений в формате: "
+            '{"score": 0-3, "correct": true/false, "feedback": "..."}'
+        )
+        user_prompt = (
+            f"ВОПРОС:\n{question}\n\n"
+            f"ЭТАЛОННЫЙ ОТВЕТ:\n{reference}\n\n"
+            f"ОТВЕТ УЧЕНИКА:\n{user_answer}\n\n"
+            "Оцени ответ ученика по 3-балльной шкале (0-3). "
+            "correct=true, если score >= 2."
+        )
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+        result = llm_service.call_llm(messages, json_mode=True, max_tokens=500)
+        if isinstance(result, list):
+            result = result[0] if result else {}
+        if not isinstance(result, dict):
+            result = {}
+        score = int(result.get("score", 0))
+        score = max(0, min(3, score))
+        correct = bool(result.get("correct", score >= 2))
+        feedback = str(result.get("feedback", ""))
+        return {
+            "correct": correct,
+            "score": score,
+            "max_score": 3,
+            "feedback": feedback,
+        }
+    except Exception as e:
+        logger.error(f"Ошибка проверки развёрнутого ответа: {e}")
+        # Fallback: простая проверка по совпадению ключевых слов
+        return _fallback_check_open(question, user_answer, reference)
+
+
+def _fallback_check_open(question, user_answer, reference):
+    """Простая проверка развёрнутого ответа без LLM (fallback)."""
+    user_lower = user_answer.lower()
+    ref_lower = reference.lower()
+    # Извлекаем ключевые слова из эталона (слова длиннее 4 символов)
+    import re as _re
+    words = [w for w in _re.findall(r"[а-яё]{5,}", ref_lower) if w not in (
+        "который", "чтобы", "также", "можно", "является", "источник", "ответ"
+    )]
+    if not words:
+        return {"correct": False, "score": 0, "max_score": 3, "feedback": "Не удалось проверить ответ."}
+    matched = sum(1 for w in words if w in user_lower)
+    ratio = matched / len(words)
+    score = 3 if ratio >= 0.6 else (2 if ratio >= 0.4 else (1 if ratio >= 0.2 else 0))
+    return {
+        "correct": score >= 2,
+        "score": score,
+        "max_score": 3,
+        "feedback": f"Совпадение с эталоном: {int(ratio * 100)}%.",
+    }

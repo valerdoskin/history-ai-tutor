@@ -39,11 +39,11 @@ _ANSWER_EMB_NPY = os.path.join(
     "knowledge",
     "answer_embeddings.npy",
 )
-# Кэш LLM-дистракторов: {вопрос: [дистрактор1, дистрактор2, дистрактор3]}
-_LLM_DISTRACTORS_JSON = os.path.join(
+# Банк вопросов: {вопрос: {class, answer, type, distractors}}
+_QUESTION_BANK_JSON = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "knowledge",
-    "llm_distractors.json",
+    "question_bank.json",
 )
 
 # Кэш embeddings вопросов: {"questions": [...], "vecs": np.ndarray}
@@ -284,30 +284,33 @@ def _semantic_distractors(question, cls, n=3):
 
 
 def _load_llm_distractors_cache():
-    """Загружает кэш LLM-дистракторов из файла (с кэшем в памяти)."""
+    """Загружает банк вопросов из question_bank.json (с кэшем в памяти).
+
+    Возвращает dict: {вопрос: {class, answer, type, distractors}}.
+    """
     global _llm_distractors_cache
     if _llm_distractors_cache is not None:
         return _llm_distractors_cache
     cache = {}
-    if os.path.exists(_LLM_DISTRACTORS_JSON):
+    if os.path.exists(_QUESTION_BANK_JSON):
         try:
-            cache = json.load(open(_LLM_DISTRACTORS_JSON, encoding="utf-8"))
+            cache = json.load(open(_QUESTION_BANK_JSON, encoding="utf-8"))
         except Exception as e:
-            logger.error(f"Не удалось загрузить кэш LLM-дистракторов: {e}")
+            logger.error(f"Не удалось загрузить банк вопросов: {e}")
     _llm_distractors_cache = cache
     return cache
 
 
 def _save_llm_distractors_cache():
-    """Сохраняет кэш LLM-дистракторов в файл."""
+    """Сохраняет банк вопросов в question_bank.json."""
     global _llm_distractors_cache
     if _llm_distractors_cache is None:
         return
     try:
-        with open(_LLM_DISTRACTORS_JSON, "w", encoding="utf-8") as f:
+        with open(_QUESTION_BANK_JSON, "w", encoding="utf-8") as f:
             json.dump(_llm_distractors_cache, f, ensure_ascii=False, indent=2)
     except Exception as e:
-        logger.error(f"Не удалось сохранить кэш LLM-дистракторов: {e}")
+        logger.error(f"Не удалось сохранить банк вопросов: {e}")
 
 
 def _llm_distractors(question, answer, n=3):
@@ -318,8 +321,10 @@ def _llm_distractors(question, answer, n=3):
     кэшируется в файле, чтобы не генерировать повторно для тех же вопросов.
     """
     cache = _load_llm_distractors_cache()
-    if question in cache and len(cache[question]) >= n:
-        return cache[question][:n]
+    entry = cache.get(question)
+    existing = entry.get("distractors", []) if isinstance(entry, dict) else []
+    if len(existing) >= n:
+        return existing[:n]
     try:
         res = llm_service.call_llm(
             [
@@ -355,7 +360,10 @@ def _llm_distractors(question, answer, n=3):
             clean.append(d)
         clean = clean[:n]
         if len(clean) >= n:
-            cache[question] = clean
+            if isinstance(entry, dict):
+                entry["distractors"] = clean
+            else:
+                cache[question] = {"distractors": clean}
             _save_llm_distractors_cache()
             return clean
         return None

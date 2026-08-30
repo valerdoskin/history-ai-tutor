@@ -2,7 +2,7 @@
 
 Определяет тип каждого вопроса реестра (факт/хронология/причина-следствие/
 понимание/сравнение/термин) на основе эвристик по формулировке вопроса.
-Результат сохраняется в knowledge/question_types.json.
+Результат сохраняется в knowledge/question_bank.json.
 
 Запуск:
     python scripts/classify_questions.py
@@ -20,7 +20,7 @@ from services import placement_service as ps
 _OUTPUT = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "knowledge",
-    "question_types.json",
+    "question_bank.json",
 )
 
 # Типы вопросов и их соответствие заданиям ЕГЭ/ОГЭ
@@ -106,13 +106,23 @@ def main():
 
     print(f"Всего вопросов реестра: {len(all_questions)}")
 
+    # ������ѧߧ�֧� ��ا� ��ԧ֧ߧ֧�ڧ��ӧѧߧߧ��� �էڧ���ѧܧ���� �ڧ� ��֧ܧ��֧ԧ� �ҧѧߧܧ� �ӧ�������
+    existing = {}
+    if os.path.exists(_OUTPUT):
+        try:
+            existing = json.load(open(_OUTPUT, encoding="utf-8"))
+        except Exception:
+            existing = {}
+
     result = {}
     for item in all_questions:
         qtype = classify_question(item["question"])
+        prev = existing.get(item["question"], {})
         result[item["question"]] = {
             "class": item["class"],
             "answer": item["answer"],
             "type": qtype,
+            "distractors": prev.get("distractors", []),
         }
 
     with open(_OUTPUT, "w", encoding="utf-8") as f:

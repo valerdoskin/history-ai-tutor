@@ -630,7 +630,7 @@ class BaseDocxParser:
                 continue
 
             # Пропускаем «шум» и колонтитулы
-            if is_noise_line(text, self.noise_patterns) or is_footer_line(text, self.footer_patterns):
+            if self.is_noise_line(text) or self.is_footer_line(text):
                 continue
 
             style = paragraph.style.name
