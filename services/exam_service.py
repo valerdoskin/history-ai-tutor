@@ -2,9 +2,9 @@
 Сервис практики ОГЭ/ЕГЭ: генерация заданий по формату ФИПИ.
 
 Поддерживает два режима:
-1. Генерация из классифицированного реестра вопросов (основной, быстрый):
-   вопросы берутся из knowledge/question_types.json, дистракторы — из кэша
-   LLM-дистракторов. Не требует обращения к LLM на лету.
+1. Генерация из банка вопросов (основной, быстрый):
+   вопросы и дистракторы берутся из knowledge/question_bank.json.
+   Не требует обращения к LLM на лету.
 2. Генерация через LLM (fallback, медленный): вопросы генерируются
    моделью на основе RAG-контекста.
 
@@ -27,14 +27,14 @@ from services import llm_service, placement_service, rag_service
 
 logger = logging.getLogger(__name__)
 
-# Путь к классифицированным вопросам реестра
-_QUESTION_TYPES_JSON = os.path.join(
+# Путь к банку вопросов
+_QUESTION_BANK_JSON = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "knowledge",
-    "question_types.json",
+    "question_bank.json",
 )
 
-# Кэш классифицированных вопросов: {вопрос: {class, answer, type}}
+# Кэш банка вопросов: {вопрос: {class, answer, type, distractors}}
 _question_types_cache = None
 
 # Типы заданий по формату ФИПИ (для LLM-режима)
@@ -65,16 +65,16 @@ TYPE_TO_FIPI = {
 
 
 def _load_question_types():
-    """Загружает классифицированные вопросы реестра (с кэшем)."""
+    """Загружает банк вопросов (с кэшем)."""
     global _question_types_cache
     if _question_types_cache is not None:
         return _question_types_cache
     cache = {}
-    if os.path.exists(_QUESTION_TYPES_JSON):
+    if os.path.exists(_QUESTION_BANK_JSON):
         try:
-            cache = json.load(open(_QUESTION_TYPES_JSON, encoding="utf-8"))
+            cache = json.load(open(_QUESTION_BANK_JSON, encoding="utf-8"))
         except Exception as e:
-            logger.error(f"Не удалось загрузить классификацию вопросов: {e}")
+            logger.error(f"Не удалось загрузить банк вопросов: {e}")
     _question_types_cache = cache
     return cache
 
@@ -113,9 +113,9 @@ def _parse_classes(classes):
 
 
 def _registry_questions(qtype=None, classes=None):
-    """Возвращает список вопросов реестра, отфильтрованных по типу и классам.
+    """Возвращает список вопросов банка, отфильтрованных по типу и классам.
 
-    Каждый элемент: {"question", "answer", "class", "type"}.
+    Каждый элемент: {"question", "answer", "class", "type", "distractors"}.
     """
     data = _load_question_types()
     if not data:
@@ -132,6 +132,7 @@ def _registry_questions(qtype=None, classes=None):
             "answer": info.get("answer", ""),
             "class": info.get("class"),
             "type": info.get("type"),
+            "distractors": info.get("distractors", []),
         })
     return result
 
@@ -160,7 +161,9 @@ def generate_oge_question_from_registry(qtype=None, classes=None):
     if not questions:
         return None
     q = random.choice(questions)
-    distractors = placement_service._llm_distractors(q["question"], q["answer"], n=3)
+    distractors = q.get("distractors") or []
+    if len(distractors) < 3:
+        distractors = placement_service._llm_distractors(q["question"], q["answer"], n=3)
     if distractors is None:
         distractors = placement_service._semantic_distractors(q["question"], q["class"], n=3)
     if distractors is None:
@@ -434,7 +437,7 @@ def generate_full_test(classes=None):
     classes = _parse_classes(classes)
     questions = []
 
-    # MCQ (выбор ответа) — из реестра question_types.json
+    # MCQ (выбор ответа) — из банка вопросов question_bank.json
     mcq_types = ["fact", "chronology", "cause_effect", "understanding", "comparison", "term"]
     for _ in range(TEST_STRUCTURE[0]["count"]):
         qtype = random.choice(mcq_types)
@@ -444,7 +447,7 @@ def generate_full_test(classes=None):
             mcq["points"] = TEST_STRUCTURE[0]["points"]
             questions.append(mcq)
 
-    # Краткий ответ — из реестра question_types.json
+    # Краткий ответ — из банка вопросов question_bank.json
     for _ in range(TEST_STRUCTURE[1]["count"]):
         qtype = random.choice(mcq_types)
         short = generate_ege_question_from_registry(qtype=qtype, classes=classes)

@@ -1,9 +1,9 @@
-"""Предвычисление LLM-дистракторов для вопросов реестра теста уровня.
+"""Предвычисление LLM-дистракторов для вопросов банка.
 
-Заполняет knowledge/llm_distractors.json дистракторами для вопросов реестра
+Заполняет knowledge/question_bank.json дистракторами для вопросов реестра
 (REGISTRY_SIZE вопросов на класс, отсортированных детерминированно).
 После завершения генерация теста становится мгновенной (все дистракторы
-берутся из кэша).
+берутся из банка).
 
 Запуск:
     python scripts/precompute_llm_distractors.py [--limit N]
@@ -55,7 +55,9 @@ def main():
     for i, (cls, q) in enumerate(all_questions, 1):
         question = q["question"]
         answer = q["answer"]
-        if question in cache and len(cache[question]) >= 3:
+        entry = cache.get(question)
+        existing = entry.get("distractors", []) if isinstance(entry, dict) else []
+        if len(existing) >= 3:
             skipped += 1
             continue
         distractors = ps._llm_distractors(question, answer, n=3)
