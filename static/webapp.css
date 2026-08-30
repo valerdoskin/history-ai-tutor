@@ -674,3 +674,227 @@ body {
 .placement-level strong {
     color: #e94560;
 }
+
+/* ============================================================
+   Полноценный тест (10 заданий)
+   ============================================================ */
+.test-card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.test-progress {
+    color: #e94560;
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.test-progress-bar {
+    height: 6px;
+    background: #0f3460;
+    border-radius: 3px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.test-progress-fill {
+    height: 100%;
+    background: #e94560;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.test-type-badge {
+    display: inline-block;
+    background: #0f3460;
+    color: #eee;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.test-points {
+    display: inline-block;
+    background: #1a1a2e;
+    color: #e94560;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 6px;
+    margin-bottom: 10px;
+}
+
+.test-question {
+    color: #eee;
+    font-size: 16px;
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+
+.test-source {
+    background: #1a1a2e;
+    border-left: 3px solid #e94560;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 14px;
+    color: #ccc;
+    font-size: 14px;
+    line-height: 1.5;
+    font-style: italic;
+}
+
+.test-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.test-option {
+    text-align: left;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.test-option:hover {
+    background: #0f3460;
+    border-color: #e94560;
+}
+
+.test-option.correct {
+    background: #1b5e20;
+    border-color: #4caf50;
+}
+
+.test-option.wrong {
+    background: #b71c1c;
+    border-color: #f44336;
+}
+
+.test-option:disabled {
+    cursor: default;
+    opacity: 0.9;
+}
+
+.test-input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+}
+
+.test-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 14px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.test-feedback {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.test-feedback.correct {
+    background: #1b5e20;
+    color: #c8e6c9;
+}
+
+.test-feedback.wrong {
+    background: #b71c1c;
+    color: #ffcdd2;
+}
+
+.test-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.test-result {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.test-result h3 {
+    color: #eee;
+    margin: 0 0 12px;
+}
+
+.test-score {
+    color: #eee;
+    font-size: 22px;
+    margin-bottom: 8px;
+}
+
+.test-score strong {
+    color: #e94560;
+}
+
+.test-detail {
+    text-align: left;
+    margin-top: 16px;
+    border-top: 1px solid #0f3460;
+    padding-top: 12px;
+}
+
+.test-detail-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #0f3460;
+}
+
+.test-detail-item:last-child {
+    border-bottom: none;
+}
+
+.test-detail-q {
+    color: #eee;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.test-detail-status {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.test-detail-status.correct {
+    color: #4caf50;
+}
+
+.test-detail-status.wrong {
+    color: #f44336;
+}
+
+.test-detail-answer {
+    color: #bbb;
+    font-size: 13px;
+}

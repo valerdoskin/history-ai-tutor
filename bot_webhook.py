@@ -727,6 +727,86 @@ def api_exam_submit():
         return jsonify({"error": "Не удалось проверить ответ"}), 500
 
 
+@app.route("/api/test", methods=["GET"])
+def api_test():
+    """API для Web App: генерация полноценного теста из 10 заданий."""
+    user_id = request.args.get("user_id")
+    try:
+        classes = "all"
+        if user_id and user_id != "null":
+            classes = db.get_selected_classes(int(user_id))
+        test = exam_service.generate_full_test(classes=classes)
+        if user_id and user_id != "null":
+            progress_service.record_activity(int(user_id))
+        return jsonify(test)
+    except Exception as e:
+        logger.error(f"Ошибка генерации теста: {e}")
+        return jsonify({"error": "Не удалось сгенерировать тест"}), 500
+
+
+@app.route("/api/test/submit", methods=["POST"])
+def api_test_submit():
+    """API для Web App: проверка ответа на задание полноценного теста.
+
+    Поддерживает все типы заданий: MCQ (выбор ответа), краткий ответ,
+    развёрнутый ответ по источнику (проверка через LLM).
+    """
+    data = request.get_json() or {}
+    user_id = data.get("user_id")
+    question = data.get("question", {})
+    user_answer = data.get("answer")
+    if not question or user_answer is None:
+        return jsonify({"error": "question и answer обязательны"}), 400
+    try:
+        qtype = question.get("type", "mcq")
+        if qtype == "source":
+            # Развёрнутый ответ по источнику — проверка через LLM
+            result = exam_service.check_open_answer(
+                question.get("question", ""),
+                user_answer,
+                question.get("answer", ""),
+            )
+            correct = result["correct"]
+            correct_answer = question.get("answer", "")
+        elif qtype == "short":
+            # Краткий ответ
+            correct_answer = question.get("answer") or question.get("correct_answer")
+            correct = exam_service.check_ege_answer(user_answer, correct_answer)
+            result = {"correct": bool(correct)}
+        else:
+            # MCQ — выбор ответа
+            correct_index = question.get("correct_index")
+            options = question.get("options", [])
+            correct_answer = options[correct_index] if 0 <= correct_index < len(options) else ""
+            correct = exam_service.check_oge_answer(
+                question, user_answer, correct_index, options
+            )
+            result = {"correct": bool(correct)}
+
+        result["correct"] = bool(correct)
+        result["points"] = question.get("points", 1)
+        result["earned"] = result.get("points", 1) if correct else 0
+        if user_id and user_id != "null":
+            uid = int(user_id)
+            progress_service.record_activity(uid)
+            db.add_exam_result(
+                uid,
+                "test",
+                question.get("question", ""),
+                user_answer,
+                correct_answer,
+                int(correct),
+                question.get("topic", ""),
+            )
+            if correct:
+                progress_service.add_xp(uid, config.XP_PER_QUESTION)
+                gamification_service.award_xp(uid, config.XP_PER_QUESTION)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"Ошибка проверки ответа теста: {e}")
+        return jsonify({"error": "Не удалось проверить ответ"}), 500
+
+
 @app.route("/api/progress", methods=["GET"])
 def api_progress():
     """API для Web App: прогресс пользователя."""

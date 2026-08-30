@@ -189,6 +189,235 @@ function renderQuestion(data) {
 }
 
 // ============================================================
+// Полноценный тест (10 заданий)
+// ============================================================
+let fullTestQuestions = [];
+let fullTestIndex = 0;
+let fullTestResults = [];
+let fullTestTotalPoints = 0;
+
+const fullTestBtn = document.getElementById('full-test-btn');
+
+fullTestBtn.addEventListener('click', startFullTest);
+
+async function startFullTest() {
+    practiceContent.innerHTML = '<p class="hint">Генерация полноценного теста...</p>';
+    try {
+        const resp = await fetch(`/api/test?user_id=${userId}`);
+        const data = await resp.json();
+        if (data.error) {
+            practiceContent.innerHTML = `<p class="hint">${data.error}</p>`;
+            return;
+        }
+        fullTestQuestions = data.questions || [];
+        fullTestIndex = 0;
+        fullTestResults = [];
+        fullTestTotalPoints = data.total_points || 0;
+        if (!fullTestQuestions.length) {
+            practiceContent.innerHTML = '<p class="hint">Не удалось сгенерировать тест. Попробуй ещё раз.</p>';
+            return;
+        }
+        renderFullTestQuestion();
+    } catch (e) {
+        practiceContent.innerHTML = '<p class="hint">Ошибка генерации теста.</p>';
+    }
+}
+
+function getTypeLabel(type) {
+    const labels = {
+        'mcq': 'Выбор ответа',
+        'short': 'Краткий ответ',
+        'source': 'Работа с источником',
+        'open': 'Развёрнутый ответ',
+    };
+    return labels[type] || type;
+}
+
+function renderFullTestQuestion() {
+    const q = fullTestQuestions[fullTestIndex];
+    if (!q) {
+        showFullTestResult();
+        return;
+    }
+    const progressPct = Math.round((fullTestIndex / fullTestQuestions.length) * 100);
+    const typeLabel = getTypeLabel(q.type);
+    let body = '';
+
+    if (q.type === 'mcq' && q.options) {
+        // MCQ — выбор ответа
+        body = `
+            <div class="test-options">
+                ${q.options.map((opt, i) => `
+                    <button class="test-option" data-idx="${i}" data-correct="${i === q.correct_index}">${i + 1}. ${opt}</button>
+                `).join('')}
+            </div>
+        `;
+    } else if (q.type === 'short') {
+        // Краткий ответ
+        body = `
+            <input type="text" class="test-input" id="test-short-answer" placeholder="Введи ответ...">
+            <button class="btn-primary" id="test-short-check">Проверить</button>
+        `;
+    } else if (q.type === 'source') {
+        // Развёрнутый ответ по источнику
+        body = `
+            ${q.source_text ? `<div class="test-source">${q.source_text}</div>` : ''}
+            <textarea class="test-textarea" id="test-open-answer" placeholder="Введи развёрнутый ответ..."></textarea>
+            <button class="btn-primary" id="test-open-check">Проверить</button>
+        `;
+    }
+
+    practiceContent.innerHTML = `
+        <div class="test-card">
+            <div class="test-progress">Вопрос ${fullTestIndex + 1} из ${fullTestQuestions.length}</div>
+            <div class="test-progress-bar"><div class="test-progress-fill" style="width:${progressPct}%"></div></div>
+            <div>
+                <span class="test-type-badge">${typeLabel}</span>
+                <span class="test-points">${q.points || 1} балл(а)</span>
+            </div>
+            <div class="test-question">${q.question}</div>
+            ${body}
+            <div class="test-feedback" id="test-feedback"></div>
+            <div class="test-nav">
+                <button class="btn-secondary" id="test-prev" ${fullTestIndex === 0 ? 'disabled' : ''}>← Назад</button>
+                <button class="btn-primary" id="test-next" style="display:none">Далее →</button>
+            </div>
+        </div>
+    `;
+
+    // Обработчики
+    const prevBtn = document.getElementById('test-prev');
+    prevBtn.addEventListener('click', () => {
+        if (fullTestIndex > 0) {
+            fullTestIndex--;
+            renderFullTestQuestion();
+        }
+    });
+
+    if (q.type === 'mcq' && q.options) {
+        document.querySelectorAll('.test-option').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const answer = idx + 1; // номер варианта (1-based)
+                document.querySelectorAll('.test-option').forEach(b => b.disabled = true);
+                const result = await submitFullTestAnswer(q, answer);
+                const correct = result.correct;
+                if (correct) {
+                    btn.classList.add('correct');
+                } else {
+                    btn.classList.add('wrong');
+                    document.querySelector(`.test-option[data-correct="true"]`).classList.add('correct');
+                }
+                showTestFeedback(result, q);
+            });
+        });
+    } else if (q.type === 'short') {
+        document.getElementById('test-short-check').addEventListener('click', async () => {
+            const answer = document.getElementById('test-short-answer').value.trim();
+            if (!answer) return;
+            const result = await submitFullTestAnswer(q, answer);
+            showTestFeedback(result, q);
+        });
+    } else if (q.type === 'source') {
+        document.getElementById('test-open-check').addEventListener('click', async () => {
+            const answer = document.getElementById('test-open-answer').value.trim();
+            if (!answer) return;
+            const result = await submitFullTestAnswer(q, answer);
+            showTestFeedback(result, q);
+        });
+    }
+}
+
+async function submitFullTestAnswer(q, answer) {
+    try {
+        const resp = await fetch('/api/test/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, question: q, answer }),
+        });
+        const data = await resp.json();
+        fullTestResults.push({
+            question: q,
+            user_answer: answer,
+            correct: data.correct,
+            earned: data.earned || 0,
+            points: data.points || 1,
+            feedback: data.feedback || '',
+        });
+        return data;
+    } catch (e) {
+        fullTestResults.push({
+            question: q,
+            user_answer: answer,
+            correct: false,
+            earned: 0,
+            points: q.points || 1,
+            feedback: 'Ошибка соединения',
+        });
+        return { correct: false, earned: 0, points: q.points || 1, feedback: 'Ошибка соединения' };
+    }
+}
+
+function showTestFeedback(result, q) {
+    const feedback = document.getElementById('test-feedback');
+    const nextBtn = document.getElementById('test-next');
+    if (result.correct) {
+        feedback.className = 'test-feedback correct';
+        feedback.textContent = '✅ Верно! +' + (result.earned || result.points || 1) + ' балл(а)';
+    } else {
+        feedback.className = 'test-feedback wrong';
+        if (q.type === 'source') {
+            feedback.textContent = '❌ Неверно. ' + (result.feedback || '') + ' Правильный ответ: ' + (q.answer || '');
+        } else {
+            feedback.textContent = '❌ Неверно. Правильный ответ: ' + (q.answer || '');
+        }
+    }
+    nextBtn.style.display = 'inline-block';
+    nextBtn.addEventListener('click', () => {
+        fullTestIndex++;
+        renderFullTestQuestion();
+    });
+}
+
+function showFullTestResult() {
+    let totalEarned = 0;
+    let totalMax = 0;
+    let correctCount = 0;
+    fullTestResults.forEach(r => {
+        totalEarned += r.earned || 0;
+        totalMax += r.points || 1;
+        if (r.correct) correctCount++;
+    });
+
+    const detailHtml = fullTestResults.map((r, i) => {
+        const status = r.correct ? '✅ Верно' : '❌ Неверно';
+        const statusClass = r.correct ? 'correct' : 'wrong';
+        const correctAnswer = r.question.answer || (r.question.options && r.question.options[r.question.correct_index]) || '';
+        return `
+            <div class="test-detail-item">
+                <div class="test-detail-q">${i + 1}. ${r.question.question}</div>
+                <div class="test-detail-status ${statusClass}">${status} · ${r.earned || 0}/${r.points || 1} балл(а)</div>
+                ${!r.correct && correctAnswer ? `<div class="test-detail-answer">Правильный ответ: ${correctAnswer}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    practiceContent.innerHTML = `
+        <div class="test-result">
+            <h3>🎉 Тест завершён!</h3>
+            <div class="test-score">Твой результат: <strong>${totalEarned}</strong> из ${totalMax} баллов</div>
+            <div class="placement-score">Правильных ответов: ${correctCount} из ${fullTestResults.length}</div>
+            <button class="btn-primary" id="test-restart" style="margin-top:12px">🔄 Пройти ещё раз</button>
+            <div class="test-detail">
+                <h3 style="text-align:left">📋 Разбор ответов</h3>
+                ${detailHtml}
+            </div>
+        </div>
+    `;
+    document.getElementById('test-restart').addEventListener('click', startFullTest);
+}
+
+// ============================================================
 // Темы / База знаний
 // ============================================================
 const topicsContent = document.getElementById('topics-content');
