@@ -256,6 +256,46 @@ class Parser10KlassRossii(BaseDocxParser):
         (например, «1914—1922 гг.»), поэтому не завершаем сбор на Heading 2.
     """
 
+    def __init__(self, config):
+        super().__init__(config)
+        # Флаг: находимся ли мы внутри оглавления в конце книги.
+        # Когда встречается «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ», все последующие
+        # параграфы (оглавление и служебная информация) пропускаются.
+        self._in_toc = False
+
+    def is_noise_line(self, text: str) -> bool:
+        """Отфильтровывает оглавление в конце книги.
+
+        Когда встречается «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ», пропускаем все
+        последующие параграфы (оглавление и служебную информацию).
+        """
+        if self._in_toc:
+            return True
+        if re.match(r"^(ОГЛАВЛЕНИЕ|СОДЕРЖАНИЕ)\s*$", text, re.IGNORECASE):
+            self._in_toc = True
+            return True
+        return super().is_noise_line(text)
+
+    def is_paragraph_heading(self, paragraph) -> bool:
+        """Проверяет, является ли параграф заголовком параграфа (§).
+
+        В этой книге настоящие параграфы — Heading 3 с «§ N Название».
+        Служебные заголовки (Heading 3) «Введение», «Итоги главы»,
+        «Вопросы и задания к главе», «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ» не являются
+        параграфами и должны быть отфильтрованы.
+        """
+        text = paragraph.text.strip()
+        if paragraph.style.name == "Heading 3":
+            # Настоящий параграф начинается с «§ N»
+            if text.startswith("§"):
+                return True
+            # Служебные заголовки — не параграфы
+            return False
+        # В некоторых учебниках параграфы оформлены как Heading 2 с «§»
+        if paragraph.style.name == "Heading 2" and text.startswith("§"):
+            return True
+        return False
+
     def collect_chapter_title(self, paragraph, text, current_chapter,
                               collecting_chapter_name, collecting_chapter_title,
                               pending_paragraph_number) -> str:
@@ -405,6 +445,29 @@ class ParserZa8Klass(BaseDocxParser):
         параграфе (§).
     """
 
+    def __init__(self, config):
+        super().__init__(config)
+        # Флаг: находимся ли мы внутри служебного хвоста в конце книги
+        # (ссылки на порталы, «ОГЛАВЛЕНИЕ», оглавление). Когда встречается
+        # «Федеральный портал истории России» или «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ»,
+        # все последующие параграфы пропускаются.
+        self._in_toc = False
+
+    def is_noise_line(self, text: str) -> bool:
+        """Отфильтровывает служебный хвост в конце книги.
+
+        Когда встречается «Федеральный портал истории России» (начало списка
+        ссылок на порталы) или «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ», пропускаем все
+        последующие параграфы (ссылки, оглавление и служебную информацию).
+        """
+        if self._in_toc:
+            return True
+        if re.match(r"^Федеральный портал истории России", text) or \
+           re.match(r"^(ОГЛАВЛЕНИЕ|СОДЕРЖАНИЕ)\s*$", text, re.IGNORECASE):
+            self._in_toc = True
+            return True
+        return super().is_noise_line(text)
+
     def is_chapter_start(self, text: str) -> bool:
         # «Г Л А В А» или «Г Л А В А    НАЗВАНИЕ» (название на той же строке).
         m = re.match(r"^\s*Г\s*Л\s*А\s*В\s*А(?:\s+(.+))?\s*$", text)
@@ -462,6 +525,29 @@ class ParserZa9Klass(BaseDocxParser):
       - Название собирается из Heading 2 + Heading 3 (без §) + Normal
         и завершается на первом параграфе (§).
     """
+
+    def __init__(self, config):
+        super().__init__(config)
+        # Флаг: находимся ли мы внутри служебного хвоста в конце книги
+        # (ссылки на порталы, «ОГЛАВЛЕНИЕ», оглавление). Когда встречается
+        # «Федеральный портал истории России» или «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ»,
+        # все последующие параграфы пропускаются.
+        self._in_toc = False
+
+    def is_noise_line(self, text: str) -> bool:
+        """Отфильтровывает служебный хвост в конце книги.
+
+        Когда встречается «Федеральный портал истории России» (начало списка
+        ссылок на порталы) или «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ», пропускаем все
+        последующие параграфы (ссылки, оглавление и служебную информацию).
+        """
+        if self._in_toc:
+            return True
+        if re.match(r"^Федеральный портал истории России", text) or \
+           re.match(r"^(ОГЛАВЛЕНИЕ|СОДЕРЖАНИЕ)\s*$", text, re.IGNORECASE):
+            self._in_toc = True
+            return True
+        return super().is_noise_line(text)
 
     def is_chapter_number(self, paragraph) -> bool:
         # Номер главы — Heading 1 или Normal с римской цифрой.
