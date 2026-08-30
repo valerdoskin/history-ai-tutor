@@ -68,6 +68,36 @@ class Parser7KlassRossii(BaseDocxParser):
     """
 
 
+class Parser7KlassVseobschaya(Parser7KlassRossii):
+    """7 класс — Всеобщая история.
+
+    Структура глав та же, что и в 7 классе России, но есть особенность:
+    буквы-обозначения карт (например, «D») оформлены как Heading 3 и
+    ошибочно распознаются как начало параграфа. Настоящие параграфы —
+    Heading 2 с «§ N Название». Поэтому Heading 3 с коротким текстом
+    (одна буква) не считается началом параграфа.
+    """
+
+    def is_paragraph_heading(self, paragraph) -> bool:
+        """Проверяет, является ли параграф заголовком параграфа (§).
+
+        Настоящие параграфы — Heading 2 с «§». Heading 3 с коротким
+        текстом (одна буква) — это буква-обозначение карты, а не
+        начало параграфа.
+        """
+        text = paragraph.text.strip()
+        # «иТоГи ГЛАВы» — это итоги главы, а не параграф
+        if re.match(r"^иТоГи\s+ГЛАВы", text, re.IGNORECASE):
+            return False
+        # Heading 3 с коротким текстом (одна буква) — обозначение карты
+        if paragraph.style.name == "Heading 3" and len(text) <= 3:
+            return False
+        # Настоящие параграфы — Heading 2 с «§»
+        if paragraph.style.name == "Heading 2" and text.startswith("§"):
+            return True
+        return False
+
+
 class Parser6KlassRossii(BaseDocxParser):
     """6 класс — История России.
 
@@ -617,7 +647,7 @@ PARSER_REGISTRY: List[Dict[str, Any]] = [
     },
     {
         "match": "7_klass_vseobschaya",
-        "parser": Parser7KlassRossii,
+        "parser": Parser7KlassVseobschaya,
         "config": "config_world_history.json",
     },
     {
