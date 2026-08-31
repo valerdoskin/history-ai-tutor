@@ -615,7 +615,7 @@ def api_topic(topic_id):
 def api_chronology():
     """API для Web App: хронология (даты и события)."""
     try:
-        limit = request.args.get("limit", default=200, type=int)
+        limit = request.args.get("limit", default=2000, type=int)
         return jsonify({"events": knowledge_service.get_chronology(limit=limit)})
     except Exception as e:
         logger.error(f"Ошибка получения хронологии: {e}")
@@ -626,7 +626,7 @@ def api_chronology():
 def api_figures():
     """API для Web App: исторические личности."""
     try:
-        limit = request.args.get("limit", default=200, type=int)
+        limit = request.args.get("limit", default=2000, type=int)
         return jsonify({"figures": knowledge_service.get_figures(limit=limit)})
     except Exception as e:
         logger.error(f"Ошибка получения личностей: {e}")
@@ -637,7 +637,7 @@ def api_figures():
 def api_terms():
     """API для Web App: термины с определениями."""
     try:
-        limit = request.args.get("limit", default=300, type=int)
+        limit = request.args.get("limit", default=2000, type=int)
         return jsonify({"terms": knowledge_service.get_terms(limit=limit)})
     except Exception as e:
         logger.error(f"Ошибка получения терминов: {e}")

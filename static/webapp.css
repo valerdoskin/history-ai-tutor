@@ -375,6 +375,42 @@ body {
     background: #0f3460;
 }
 
+.btn-secondary.active {
+    background: #e94560;
+    color: #fff;
+}
+
+.section-count {
+    color: #e94560;
+    font-weight: 600;
+    padding: 8px 4px;
+    font-size: 14px;
+}
+
+.topics-search {
+    padding: 8px 4px;
+}
+
+.topics-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #2a3a5c;
+    border-radius: 8px;
+    background: #16213e;
+    color: #eee;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.topics-search input::placeholder {
+    color: #7a8bb0;
+}
+
+.topics-search input:focus {
+    outline: none;
+    border-color: #e94560;
+}
+
 .topics-content {
     overflow-y: auto;
     flex: 1;

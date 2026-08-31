@@ -421,6 +421,7 @@ function showFullTestResult() {
 // Темы / База знаний
 // ============================================================
 const topicsContent = document.getElementById('topics-content');
+const searchInput = document.getElementById('topics-search-input');
 
 async function loadTopics() {
     topicsContent.innerHTML = '<p class="hint">Загрузка тем...</p>';
@@ -466,73 +467,123 @@ async function loadTopics() {
     }
 }
 
+let chronologyData = [];
+let figuresData = [];
+let termsData = [];
+
+function renderChronology() {
+    const q = (searchInput.value || '').trim().toLowerCase();
+    const filtered = q ? chronologyData.filter(e => (e.year || '').toLowerCase().includes(q) || (e.event || '').toLowerCase().includes(q)) : chronologyData;
+    let html = `<div class="section-count">Событий: ${filtered.length}${q ? ` (из ${chronologyData.length})` : ''}</div>`;
+    html += '<div class="chronology-list">';
+    filtered.forEach(e => {
+        html += `<div class="chronology-item"><span class="chrono-date">${e.year || ''}</span> ${e.event || ''}</div>`;
+    });
+    html += '</div>';
+    topicsContent.innerHTML = html;
+}
+
 async function loadChronology() {
     topicsContent.innerHTML = '<p class="hint">Загрузка хронологии...</p>';
     try {
-        const resp = await fetch('/api/chronology?limit=50');
+        const resp = await fetch('/api/chronology?limit=2000');
         const data = await resp.json();
-        const events = data.events || [];
-        if (!events.length) {
+        chronologyData = data.events || [];
+        if (!chronologyData.length) {
             topicsContent.innerHTML = '<p class="hint">События не найдены.</p>';
             return;
         }
-        let html = '<div class="chronology-list">';
-        events.forEach(e => {
-            html += `<div class="chronology-item"><span class="chrono-date">${e.year || ''}</span> ${e.event || ''}</div>`;
-        });
-        html += '</div>';
-        topicsContent.innerHTML = html;
+        renderChronology();
     } catch (e) {
         topicsContent.innerHTML = '<p class="hint">Ошибка загрузки хронологии.</p>';
     }
 }
 
+function renderFigures() {
+    const q = (searchInput.value || '').trim().toLowerCase();
+    const filtered = q ? figuresData.filter(f => (f.name || '').toLowerCase().includes(q) || (f.description || '').toLowerCase().includes(q)) : figuresData;
+    let html = `<div class="section-count">Личностей: ${filtered.length}${q ? ` (из ${figuresData.length})` : ''}</div>`;
+    html += '<div class="figure-list">';
+    filtered.forEach(f => {
+        html += `<div class="figure-item"><strong>${f.name || ''}</strong> — ${f.description || ''}</div>`;
+    });
+    html += '</div>';
+    topicsContent.innerHTML = html;
+}
+
 async function loadFigures() {
     topicsContent.innerHTML = '<p class="hint">Загрузка личностей...</p>';
     try {
-        const resp = await fetch('/api/figures?limit=50');
+        const resp = await fetch('/api/figures?limit=2000');
         const data = await resp.json();
-        const figures = data.figures || [];
-        if (!figures.length) {
+        figuresData = data.figures || [];
+        if (!figuresData.length) {
             topicsContent.innerHTML = '<p class="hint">Личности не найдены.</p>';
             return;
         }
-        let html = '<div class="figure-list">';
-        figures.forEach(f => {
-            html += `<div class="figure-item"><strong>${f.name || ''}</strong> — ${f.description || ''}</div>`;
-        });
-        html += '</div>';
-        topicsContent.innerHTML = html;
+        renderFigures();
     } catch (e) {
         topicsContent.innerHTML = '<p class="hint">Ошибка загрузки личностей.</p>';
     }
 }
 
+function renderTerms() {
+    const q = (searchInput.value || '').trim().toLowerCase();
+    const filtered = q ? termsData.filter(t => (t.term || '').toLowerCase().includes(q) || (t.definition || '').toLowerCase().includes(q)) : termsData;
+    let html = `<div class="section-count">Терминов: ${filtered.length}${q ? ` (из ${termsData.length})` : ''}</div>`;
+    html += '<div class="term-list">';
+    filtered.forEach(t => {
+        html += `<div class="term-item"><strong>${t.term || ''}</strong> — ${t.definition || ''}</div>`;
+    });
+    html += '</div>';
+    topicsContent.innerHTML = html;
+}
+
 async function loadTerms() {
     topicsContent.innerHTML = '<p class="hint">Загрузка терминов...</p>';
     try {
-        const resp = await fetch('/api/terms?limit=50');
+        const resp = await fetch('/api/terms?limit=2000');
         const data = await resp.json();
-        const terms = data.terms || [];
-        if (!terms.length) {
+        termsData = data.terms || [];
+        if (!termsData.length) {
             topicsContent.innerHTML = '<p class="hint">Термины не найдены.</p>';
             return;
         }
-        let html = '<div class="term-list">';
-        terms.forEach(t => {
-            html += `<div class="term-item"><strong>${t.term || ''}</strong> — ${t.definition || ''}</div>`;
-        });
-        html += '</div>';
-        topicsContent.innerHTML = html;
+        renderTerms();
     } catch (e) {
         topicsContent.innerHTML = '<p class="hint">Ошибка загрузки терминов.</p>';
     }
 }
 
-document.getElementById('topics-btn').addEventListener('click', loadTopics);
-document.getElementById('chronology-btn').addEventListener('click', loadChronology);
-document.getElementById('figures-btn').addEventListener('click', loadFigures);
-document.getElementById('terms-btn').addEventListener('click', loadTerms);
+function setActiveTopicBtn(btn) {
+    document.querySelectorAll('#tab-topics .topics-controls button').forEach(b => {
+        b.classList.remove('active');
+    });
+    btn.classList.add('active');
+}
+
+document.getElementById('topics-btn').addEventListener('click', () => {
+    setActiveTopicBtn(document.getElementById('topics-btn'));
+    loadTopics();
+});
+document.getElementById('chronology-btn').addEventListener('click', () => {
+    setActiveTopicBtn(document.getElementById('chronology-btn'));
+    loadChronology();
+});
+document.getElementById('figures-btn').addEventListener('click', () => {
+    setActiveTopicBtn(document.getElementById('figures-btn'));
+    loadFigures();
+});
+document.getElementById('terms-btn').addEventListener('click', () => {
+    setActiveTopicBtn(document.getElementById('terms-btn'));
+    loadTerms();
+});
+
+searchInput.addEventListener('input', () => {
+    if (chronologyData.length) renderChronology();
+    else if (figuresData.length) renderFigures();
+    else if (termsData.length) renderTerms();
+});
 
 // ============================================================
 // Профиль

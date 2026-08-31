@@ -140,7 +140,7 @@ def _get_meta(chunk):
     return meta
 
 
-def get_chronology(limit=200):
+def get_chronology(limit=2000):
     """Возвращает хронологию: даты и события из метаданных чанков."""
     chunks = _load_chunks()
     events = []
@@ -173,7 +173,7 @@ def _year_sort_key(year):
     return (1, s)
 
 
-def get_figures(limit=200):
+def get_figures(limit=2000):
     """Возвращает исторических личностей из метаданных чанков."""
     chunks = _load_chunks()
     figures = {}
@@ -194,7 +194,7 @@ def get_figures(limit=200):
     return result[:limit]
 
 
-def get_terms(limit=300):
+def get_terms(limit=2000):
     """Возвращает термины с определениями из метаданных чанков."""
     chunks = _load_chunks()
     terms = {}
