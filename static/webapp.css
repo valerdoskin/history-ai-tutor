@@ -172,8 +172,14 @@ body {
    ============================================================ */
 .practice-controls {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 16px;
+}
+
+.practice-controls .btn-primary,
+.practice-controls .btn-secondary {
+    white-space: nowrap;
 }
 
 .practice-controls select {
