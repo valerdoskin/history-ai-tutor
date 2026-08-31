@@ -190,10 +190,15 @@ body {
     padding: 10px 16px;
     border: none;
     border-radius: 8px;
-    background: #e94560;
-    color: #fff;
+    background: #16213e;
+    color: #eee;
     font-size: 14px;
     cursor: pointer;
+}
+
+.btn-primary.active {
+    background: #e94560;
+    color: #fff;
 }
 
 .practice-content {

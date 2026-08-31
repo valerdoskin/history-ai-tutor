@@ -45,6 +45,11 @@ document.querySelectorAll('.tab').forEach(tab => {
         document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
         if (tab.dataset.tab === 'profile') loadProfile();
         if (tab.dataset.tab === 'classes') loadClasses();
+        if (tab.dataset.tab === 'topics') {
+            activeSection = 'topics';
+            setActiveTopicBtn(document.getElementById('topics-btn'));
+            loadTopics();
+        }
     });
 });
 
@@ -470,6 +475,7 @@ async function loadTopics() {
 let chronologyData = [];
 let figuresData = [];
 let termsData = [];
+let activeSection = 'topics';
 
 function renderChronology() {
     const q = (searchInput.value || '').trim().toLowerCase();
@@ -563,26 +569,30 @@ function setActiveTopicBtn(btn) {
 }
 
 document.getElementById('topics-btn').addEventListener('click', () => {
+    activeSection = 'topics';
     setActiveTopicBtn(document.getElementById('topics-btn'));
     loadTopics();
 });
 document.getElementById('chronology-btn').addEventListener('click', () => {
+    activeSection = 'chronology';
     setActiveTopicBtn(document.getElementById('chronology-btn'));
     loadChronology();
 });
 document.getElementById('figures-btn').addEventListener('click', () => {
+    activeSection = 'figures';
     setActiveTopicBtn(document.getElementById('figures-btn'));
     loadFigures();
 });
 document.getElementById('terms-btn').addEventListener('click', () => {
+    activeSection = 'terms';
     setActiveTopicBtn(document.getElementById('terms-btn'));
     loadTerms();
 });
 
 searchInput.addEventListener('input', () => {
-    if (chronologyData.length) renderChronology();
-    else if (figuresData.length) renderFigures();
-    else if (termsData.length) renderTerms();
+    if (activeSection === 'chronology') renderChronology();
+    else if (activeSection === 'figures') renderFigures();
+    else if (activeSection === 'terms') renderTerms();
 });
 
 // ============================================================
