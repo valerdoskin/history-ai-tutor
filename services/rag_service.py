@@ -29,9 +29,12 @@ def retrieve(query, top_k=None, class_filter=None):
             {
                 "text": payload.get("text", ""),
                 "score": round(r.score, 4),
-                "book": payload.get("book", ""),
-                "chapter": payload.get("chapter", ""),
-                "paragraph": payload.get("paragraph", ""),
+                "book": payload.get("book_line") or payload.get("book", ""),
+                "chapter": payload.get("chapter_title") or payload.get("chapter", ""),
+                "paragraph": payload.get("paragraph_title") or payload.get("paragraph", ""),
+                "paragraph_number": payload.get("paragraph_number", ""),
+                "page_start": payload.get("page_start", ""),
+                "page_end": payload.get("page_end", ""),
                 "section": payload.get("section", ""),
                 "dates": payload.get("dates", []),
                 "figures": payload.get("figures", []),
@@ -110,6 +113,9 @@ def grounded_answer(query, user_id=None, top_k=None, class_filter=None):
                 "book": c.get("book"),
                 "chapter": c.get("chapter"),
                 "paragraph": c.get("paragraph"),
+                "paragraph_number": c.get("paragraph_number", ""),
+                "page_start": c.get("page_start", ""),
+                "page_end": c.get("page_end", ""),
                 "score": c.get("score"),
             }
         )

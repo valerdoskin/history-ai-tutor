@@ -139,6 +139,26 @@ body {
     50% { opacity: 1; }
 }
 
+.sources {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #aab;
+}
+
+.sources-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #ccc;
+}
+
+.source-item {
+    word-break: break-word;
+}
+
 .chat-input {
     display: flex;
     gap: 8px;

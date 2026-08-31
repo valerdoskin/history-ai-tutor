@@ -309,11 +309,25 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         answer = result["answer"]
         sources = result["sources"]
 
-        # Добавляем источники
+        # Добавляем источники (ссылки на параграфы учебников)
         if sources:
             answer += "\n\n📚 *Источники:*\n"
             for s in sources[:3]:
-                answer += f"• {s['book']} — {s['chapter']} — {s['paragraph']}\n"
+                line = "• "
+                parts = []
+                if s.get("book"):
+                    parts.append(s["book"])
+                if s.get("chapter"):
+                    parts.append(s["chapter"])
+                if s.get("paragraph"):
+                    parts.append(s["paragraph"])
+                line += " — ".join(parts)
+                if s.get("page_start"):
+                    line += f" (с. {s['page_start']}"
+                    if s.get("page_end") and s["page_end"] != s["page_start"]:
+                        line += f"–{s['page_end']}"
+                    line += ")"
+                answer += line + "\n"
 
         # Начисляем XP за вопрос
         gamification_service.award_xp(user_id, config.XP_PER_QUESTION)

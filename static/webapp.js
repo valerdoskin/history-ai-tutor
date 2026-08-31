@@ -60,13 +60,38 @@ const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 
-function addMessage(text, isUser) {
+function addMessage(text, isUser, sources) {
     const div = document.createElement('div');
     div.className = `message ${isUser ? 'user' : 'bot'}`;
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
     bubble.textContent = text;
     div.appendChild(bubble);
+
+    // Показываем источники (параграфы учебников) под ответом бота
+    if (!isUser && sources && sources.length) {
+        const srcDiv = document.createElement('div');
+        srcDiv.className = 'sources';
+        const title = document.createElement('div');
+        title.className = 'sources-title';
+        title.textContent = '📚 Источники:';
+        srcDiv.appendChild(title);
+        sources.slice(0, 3).forEach(s => {
+            const parts = [s.book, s.chapter, s.paragraph].filter(Boolean);
+            let line = parts.join(' — ');
+            if (s.page_start) {
+                line += ` (с. ${s.page_start}`;
+                if (s.page_end && s.page_end !== s.page_start) line += `–${s.page_end}`;
+                line += ')';
+            }
+            const item = document.createElement('div');
+            item.className = 'source-item';
+            item.textContent = '• ' + line;
+            srcDiv.appendChild(item);
+        });
+        div.appendChild(srcDiv);
+    }
+
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -91,7 +116,7 @@ async function sendMessage() {
         });
         const data = await resp.json();
         typing.remove();
-        addMessage(data.answer || 'Извини, не удалось получить ответ.', false);
+        addMessage(data.answer || 'Извини, не удалось получить ответ.', false, data.sources);
     } catch (e) {
         typing.remove();
         addMessage('Ошибка соединения. Попробуй ещё раз.', false);
