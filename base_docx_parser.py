@@ -85,9 +85,18 @@ def detect_special_block(line: str, special_blocks: Dict[str, str]) -> Optional[
     Определяет, является ли строка заголовком специального блока.
 
     Возвращает ключ блока (например, "historical_portrait") или None.
+    Маркеры проверяются от самых длинных к коротким, чтобы более
+    специфичные заголовки (например, «ВОПРОСЫ И ЗАДАНИЯ К ГЛАВЕ»)
+    распознавались раньше общих («ВОПРОСЫ И ЗАДАНИЯ»).
     """
     line_lower = line.lower()
-    for key, marker in special_blocks.items():
+    # Строки оглавления (например, «Вопросы и задания к главе\t143»)
+    # содержат табуляцию и номер страницы — не считаем их спецблоками.
+    if "\t" in line:
+        return None
+    for key, marker in sorted(
+        special_blocks.items(), key=lambda kv: len(kv[1]), reverse=True
+    ):
         if marker.lower() in line_lower:
             return key
     return None
@@ -847,8 +856,20 @@ class BaseDocxParser:
                 continue
 
             # Если заголовок параграфа был разбит на 2 части и следующая часть —
-            # Heading 2 (продолжение названия параграфа), объединяем их.
-            if collecting_paragraph_title and current_paragraph and style == "Heading 2":
+            # Heading 2, Heading 3 или Normal (продолжение названия параграфа),
+            # объединяем их. Heading 3 без «§» — это название параграфа
+            # (например, в 10 классе История России номер «§ 10» и название
+            # идут отдельными Heading 3). Normal — название параграфа в тех
+            # случаях, когда оно оформлено обычным текстом (например, «§ 25—26»).
+            # Служебные заголовки (колонтитулы, итоги главы) не объединяем.
+            if (
+                collecting_paragraph_title
+                and current_paragraph
+                and style in ("Heading 2", "Heading 3", "Normal")
+                and "?" not in text
+                and not self.is_noise_line(text)
+                and not self.is_chapter_summary(paragraph)
+            ):
                 current_paragraph["title"] += " " + text
                 continue
 

@@ -268,11 +268,16 @@ class Parser10KlassRossii(BaseDocxParser):
 
         Когда встречается «ОГЛАВЛЕНИЕ»/«СОДЕРЖАНИЕ», пропускаем все
         последующие параграфы (оглавление и служебную информацию).
+        Также отфильтровываем строки оглавления вида
+        «Вопросы и задания к главе\t143» (текст + табуляция + номер страницы).
         """
         if self._in_toc:
             return True
         if re.match(r"^(ОГЛАВЛЕНИЕ|СОДЕРЖАНИЕ)\s*$", text, re.IGNORECASE):
             self._in_toc = True
+            return True
+        # Строка оглавления: текст + табуляция + номер страницы.
+        if re.match(r"^[А-ЯЁ][^\t]*\t\d+\s*$", text):
             return True
         return super().is_noise_line(text)
 
@@ -371,6 +376,9 @@ class Parser10KlassVseobschaya(BaseDocxParser):
         колонтитулы-разделители, которые не должны попадать в текст.
         """
         if re.match(r"^\s*МИР\s*$", text) or re.match(r"^\s*РОССИЯ\s*$", text):
+            return True
+        # «МИР РОССИЯ» (вместе) — колонтитул-разделитель.
+        if re.match(r"^\s*МИР\s+РОССИЯ\s*$", text, re.IGNORECASE):
             return True
         return super().is_noise_line(text)
 
