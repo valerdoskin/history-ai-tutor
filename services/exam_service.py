@@ -84,6 +84,69 @@ def get_question_types():
     return TYPE_TO_FIPI
 
 
+# Маппинг типов LLM-режима на типы банка вопросов
+_LLM_TO_BANK_TYPE = {
+    # ОГЭ
+    "date_event": "chronology",
+    "figure": "fact",
+    "sequence": "chronology",
+    # ЕГЭ
+    "short_answer": "fact",
+    "source": "understanding",
+}
+
+
+def _normalize_bank_type(qtype):
+    """Приводит тип вопроса к типу банка (fact/chronology/cause_effect/...).
+
+    Если тип уже банковский — возвращает как есть, иначе сопоставляет
+    через _LLM_TO_BANK_TYPE, иначе — fact.
+    """
+    if qtype in TYPE_TO_FIPI:
+        return qtype
+    return _LLM_TO_BANK_TYPE.get(qtype, "fact")
+
+
+def _save_question_to_bank(question, answer, distractors, qtype, classes):
+    """Сохраняет сгенерированный LLM вопрос в банк (кэш + диск).
+
+    Вопрос сохраняется только если его ещё нет в банке. Дистракторы
+    добавляются, если их не хватает. Возвращает True при успехе.
+    """
+    if not question or not answer:
+        return False
+    bank = _load_question_types()
+    bank_type = _normalize_bank_type(qtype)
+    entry = bank.get(question)
+    if isinstance(entry, dict):
+        # Вопрос уже есть — дополняем недостающие поля
+        if not entry.get("answer"):
+            entry["answer"] = answer
+        if not entry.get("type"):
+            entry["type"] = bank_type
+        if not entry.get("class"):
+            entry["class"] = classes if classes != "all" else None
+        existing = entry.get("distractors", [])
+        for d in distractors:
+            if d and d != answer and d not in existing:
+                existing.append(d)
+        entry["distractors"] = existing[:3]
+    else:
+        bank[question] = {
+            "class": classes if classes != "all" else None,
+            "answer": answer,
+            "type": bank_type,
+            "distractors": [d for d in distractors if d and d != answer][:3],
+        }
+    try:
+        with open(_QUESTION_BANK_JSON, "w", encoding="utf-8") as f:
+            json.dump(bank, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        logger.error(f"Не удалось сохранить вопрос в банк: {e}")
+        return False
+
+
 def _get_context(topic, max_chars=4000, class_filter=None):
     query = topic or "история России для ОГЭ и ЕГЭ"
     chunks = rag_service.retrieve(query, top_k=4, class_filter=class_filter)
@@ -236,7 +299,21 @@ def generate_oge_question(topic=None, qtype=None, classes=None):
             ),
         },
     ]
-    return _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
+    result = _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
+    # Сохраняем сгенерированный вопрос в банк для переиспользования
+    if result.get("question") and result.get("options") and result.get("correct_index") is not None:
+        try:
+            options = result["options"]
+            correct_index = int(result["correct_index"])
+            if 0 <= correct_index < len(options):
+                answer = options[correct_index]
+                distractors = [o for i, o in enumerate(options) if i != correct_index]
+                _save_question_to_bank(
+                    result["question"], answer, distractors, qtype, classes
+                )
+        except (ValueError, TypeError):
+            pass
+    return result
 
 
 def generate_ege_question(topic=None, qtype=None, classes=None):
@@ -273,7 +350,13 @@ def generate_ege_question(topic=None, qtype=None, classes=None):
             ),
         },
     ]
-    return _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
+    result = _normalize_question(llm_service.call_llm(messages, json_mode=True, max_tokens=800))
+    # Сохраняем сгенерированный вопрос в банк для переиспользования
+    if result.get("question") and result.get("answer"):
+        _save_question_to_bank(
+            result["question"], result["answer"], [], qtype, classes
+        )
+    return result
 
 
 def check_oge_answer(question, user_answer, correct_index, options):
