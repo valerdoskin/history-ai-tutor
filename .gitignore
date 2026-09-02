@@ -51,3 +51,6 @@ books/Istoriya_Rossii_11kl_2023.docx
 
 # Локальные скрипты запуска
 run_webapp_local.py
+
+# Официальные PDF ФИПИ (скачиваются отдельно, не коммитить)
+knowledge/fipi_official/
