@@ -37,6 +37,26 @@ _QUESTION_BANK_JSON = os.path.join(
 # Кэш банка вопросов: {вопрос: {class, answer, type, distractors}}
 _question_types_cache = None
 
+# Путь к справочнику по культуре
+_CULTURE_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "culture.json",
+)
+
+# Кэш справочника по культуре
+_culture_cache = None
+
+# Путь к справочнику по картам
+_MAPS_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "maps.json",
+)
+
+# Кэш справочника по картам
+_maps_cache = None
+
 # Типы заданий по формату ФИПИ (для LLM-режима)
 OGE_TYPES = {
     "date_event": "Установите соответствие между событиями и датами",
@@ -61,6 +81,10 @@ TYPE_TO_FIPI = {
     "understanding": {"label": "Понимание / объяснение", "ege": [14, 19], "oge": [19, 20]},
     "comparison": {"label": "Сравнение", "ege": [20], "oge": [23]},
     "term": {"label": "Термины и понятия", "ege": [19], "oge": [3, 5]},
+    "culture": {"label": "История культуры", "ege": [7, 15, 16], "oge": [13, 14]},
+    "argumentation": {"label": "Аргументация точки зрения", "ege": [21], "oge": [6]},
+    "map": {"label": "Работа с исторической картой", "ege": [9, 10, 11, 12], "oge": [8, 9, 10]},
+    "source": {"label": "Работа с историческим источником", "ege": [6, 13, 14], "oge": [17, 18, 19, 20]},
 }
 
 
@@ -76,6 +100,48 @@ def _load_question_types():
         except Exception as e:
             logger.error(f"Не удалось загрузить банк вопросов: {e}")
     _question_types_cache = cache
+    return cache
+
+
+def _load_culture():
+    """Загружает справочник по культуре (с кэшем).
+
+    Возвращает список dict: {"name", "type", "author", "year", "period",
+    "class", "fipi_codes", "description", "source_chunk_id"}.
+    """
+    global _culture_cache
+    if _culture_cache is not None:
+        return _culture_cache
+    cache = []
+    if os.path.exists(_CULTURE_JSON):
+        try:
+            data = json.load(open(_CULTURE_JSON, encoding="utf-8"))
+            if isinstance(data, list):
+                cache = data
+        except Exception as e:
+            logger.error(f"Не удалось загрузить справочник по культуре: {e}")
+    _culture_cache = cache
+    return cache
+
+
+def _load_maps():
+    """Загружает справочник по картам (с кэшем).
+
+    Возвращает список dict: {"name", "period", "class", "description",
+    "key_objects", "fipi_codes", "source_chunk_id"}.
+    """
+    global _maps_cache
+    if _maps_cache is not None:
+        return _maps_cache
+    cache = []
+    if os.path.exists(_MAPS_JSON):
+        try:
+            data = json.load(open(_MAPS_JSON, encoding="utf-8"))
+            if isinstance(data, list):
+                cache = data
+        except Exception as e:
+            logger.error(f"Не удалось загрузить справочник по картам: {e}")
+    _maps_cache = cache
     return cache
 
 
@@ -359,6 +425,179 @@ def generate_ege_question(topic=None, qtype=None, classes=None):
     return result
 
 
+# ============================================================
+# Генерация заданий новых типов (культура, аргументация, карты, источники)
+# ============================================================
+
+def _culture_records_for_class(classes):
+    """Возвращает записи культуры, отфильтрованные по классам."""
+    records = _load_culture()
+    classes = _parse_classes(classes)
+    result = []
+    for r in records:
+        if classes != "all" and r.get("class") not in classes:
+            continue
+        result.append(r)
+    return result
+
+
+def generate_culture_question(classes=None):
+    """Генерирует задание по культуре из culture.json.
+
+    Берёт случайный памятник культуры и составляет вопрос
+    «Кто автор / в каком году / как называется». Возвращает MCQ.
+    """
+    records = _culture_records_for_class(classes)
+    if not records:
+        return None
+    r = random.choice(records)
+    name = r.get("name", "")
+    author = r.get("author", "")
+    year = r.get("year", "")
+    cls = r.get("class")
+
+    # Выбираем тип вопроса в зависимости от доступных данных
+    if author:
+        question = f"Кто является автором памятника культуры «{name}»?"
+        answer = author
+        # Дистракторы — авторы других памятников того же класса
+        distractors = []
+        for other in records:
+            oa = other.get("author", "")
+            if oa and oa != author and oa not in distractors:
+                distractors.append(oa)
+            if len(distractors) >= 3:
+                break
+    elif year:
+        question = f"В каком году был создан памятник культуры «{name}»?"
+        answer = year
+        distractors = []
+        for other in records:
+            oy = other.get("year", "")
+            if oy and oy != year and oy not in distractors:
+                distractors.append(oy)
+            if len(distractors) >= 3:
+                break
+    else:
+        question = f"Как называется памятник культуры, описанный так: «{r.get('description', '')[:120]}»?"
+        answer = name
+        distractors = []
+        for other in records:
+            on = other.get("name", "")
+            if on and on != name and on not in distractors:
+                distractors.append(on)
+            if len(distractors) >= 3:
+                break
+
+    if len(distractors) < 3:
+        distractors = placement_service._fallback_distractors(
+            {"question": question, "answer": answer, "paragraph": ""},
+            cls,
+            classes if classes != "all" else placement_service.ALL_CLASSES,
+            n=3,
+        )
+    mcq = _build_mcq(question, answer, distractors)
+    mcq["type"] = "culture"
+    mcq["class"] = cls
+    mcq["fipi_numbers"] = TYPE_TO_FIPI["culture"].get("oge", [])
+    return mcq
+
+
+def generate_argumentation_question(classes=None):
+    """Генерирует задание на аргументацию из банка вопросов (тип argumentation).
+
+    Возвращает задание с развёрнутым ответом (вопрос + эталонный ответ).
+    """
+    questions = _registry_questions(qtype="argumentation", classes=classes)
+    if not questions:
+        return None
+    q = random.choice(questions)
+    return {
+        "question": q["question"],
+        "answer": q["answer"],
+        "explanation": "",
+        "topic": "",
+        "type": "argumentation",
+        "class": q["class"],
+        "fipi_numbers": TYPE_TO_FIPI["argumentation"].get("ege", []),
+    }
+
+
+def _map_records_for_class(classes):
+    """Возвращает записи карт, отфильтрованные по классам."""
+    records = _load_maps()
+    classes = _parse_classes(classes)
+    result = []
+    for r in records:
+        if classes != "all" and r.get("class") not in classes:
+            continue
+        result.append(r)
+    return result
+
+
+def generate_map_question(classes=None):
+    """Генерирует задание по исторической карте из maps.json.
+
+    Берёт случайную карту и составляет вопрос по её описанию.
+    Возвращает MCQ.
+    """
+    records = _map_records_for_class(classes)
+    if not records:
+        return None
+    r = random.choice(records)
+    name = r.get("name", "")
+    description = r.get("description", "")
+    key_objects = r.get("key_objects", [])
+    cls = r.get("class")
+
+    # Вопрос: по описанию карты определить, какое событие/поход показано
+    question = (
+        f"На исторической карте показано: {description[:200]}... "
+        f"Какое историческое событие (поход/война/территориальное изменение) изображено на карте?"
+    )
+    answer = name
+    distractors = []
+    for other in records:
+        on = other.get("name", "")
+        if on and on != name and on not in distractors:
+            distractors.append(on)
+        if len(distractors) >= 3:
+            break
+
+    if len(distractors) < 3:
+        distractors = placement_service._fallback_distractors(
+            {"question": question, "answer": answer, "paragraph": ""},
+            cls,
+            classes if classes != "all" else placement_service.ALL_CLASSES,
+            n=3,
+        )
+    mcq = _build_mcq(question, answer, distractors)
+    mcq["type"] = "map"
+    mcq["class"] = cls
+    mcq["fipi_numbers"] = TYPE_TO_FIPI["map"].get("oge", [])
+    return mcq
+
+
+def generate_source_question(classes=None):
+    """Генерирует задание по историческому источнику из source_questions.json.
+
+    Возвращает задание с источником и вопросом.
+    """
+    questions = _source_questions_for_class(classes)
+    if not questions:
+        return None
+    q = random.choice(questions)
+    return {
+        "type": "source",
+        "question": q["question"],
+        "answer": q["answer"],
+        "class": q["class"],
+        "source_text": q["source_text"],
+        "source_title": q["source_title"],
+        "fipi_numbers": TYPE_TO_FIPI["source"].get("ege", []),
+    }
+
+
 def check_oge_answer(question, user_answer, correct_index, options):
     """Проверяет ответ на задание ОГЭ.
 
@@ -521,6 +760,7 @@ def generate_full_test(classes=None):
     questions = []
 
     # MCQ (выбор ответа) — из банка вопросов question_bank.json
+    # + культура и карты (из culture.json / maps.json)
     mcq_types = ["fact", "chronology", "cause_effect", "understanding", "comparison", "term"]
     for _ in range(TEST_STRUCTURE[0]["count"]):
         qtype = random.choice(mcq_types)
@@ -531,6 +771,7 @@ def generate_full_test(classes=None):
             questions.append(mcq)
 
     # Краткий ответ — из банка вопросов question_bank.json
+    # + аргументация (из банка, тип argumentation)
     for _ in range(TEST_STRUCTURE[1]["count"]):
         qtype = random.choice(mcq_types)
         short = generate_ege_question_from_registry(qtype=qtype, classes=classes)
@@ -555,6 +796,20 @@ def generate_full_test(classes=None):
                 mcq["type"] = "mcq"
                 mcq["points"] = TEST_STRUCTURE[0]["points"]
                 questions.append(mcq)
+
+    # Добираем культуру и карты, если не хватает до 10
+    if len(questions) < 10:
+        culture_q = generate_culture_question(classes=classes)
+        if culture_q:
+            culture_q["type"] = "mcq"
+            culture_q["points"] = TEST_STRUCTURE[0]["points"]
+            questions.append(culture_q)
+    if len(questions) < 10:
+        map_q = generate_map_question(classes=classes)
+        if map_q:
+            map_q["type"] = "mcq"
+            map_q["points"] = TEST_STRUCTURE[0]["points"]
+            questions.append(map_q)
 
     # Перемешиваем вопросы
     random.shuffle(questions)
