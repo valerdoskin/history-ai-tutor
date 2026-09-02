@@ -254,9 +254,9 @@ class TestPlacementService(unittest.TestCase):
     def test_get_classes_info(self):
         from services import placement_service
         info = placement_service.get_classes_info()
-        self.assertEqual(len(info), 6)
+        self.assertEqual(len(info), 7)
         classes = [c["class"] for c in info]
-        self.assertEqual(classes, [5, 6, 7, 8, 9, 10])
+        self.assertEqual(classes, [5, 6, 7, 8, 9, 10, 11])
         for c in info:
             self.assertTrue(c["description"])
 

@@ -499,6 +499,7 @@ def generate_culture_question(classes=None):
     mcq = _build_mcq(question, answer, distractors)
     mcq["type"] = "culture"
     mcq["class"] = cls
+    mcq["topic"] = "Культура"
     mcq["fipi_numbers"] = TYPE_TO_FIPI["culture"].get("oge", [])
     return mcq
 
@@ -516,7 +517,7 @@ def generate_argumentation_question(classes=None):
         "question": q["question"],
         "answer": q["answer"],
         "explanation": "",
-        "topic": "",
+        "topic": "Аргументация",
         "type": "argumentation",
         "class": q["class"],
         "fipi_numbers": TYPE_TO_FIPI["argumentation"].get("ege", []),
@@ -574,6 +575,7 @@ def generate_map_question(classes=None):
     mcq = _build_mcq(question, answer, distractors)
     mcq["type"] = "map"
     mcq["class"] = cls
+    mcq["topic"] = "Карты"
     mcq["fipi_numbers"] = TYPE_TO_FIPI["map"].get("oge", [])
     return mcq
 
@@ -592,6 +594,7 @@ def generate_source_question(classes=None):
         "question": q["question"],
         "answer": q["answer"],
         "class": q["class"],
+        "topic": "Источники",
         "source_text": q["source_text"],
         "source_title": q["source_title"],
         "fipi_numbers": TYPE_TO_FIPI["source"].get("ege", []),
@@ -709,6 +712,7 @@ def _build_source_task(classes):
             "answer": q["answer"],
             "points": FIPI_POINTS["source"],
             "class": q["class"],
+            "topic": "Источники",
             "source_text": q["source_text"],
             "source_title": q["source_title"],
             "fipi_numbers": [17, 18, 19, 20, 21],
@@ -739,6 +743,7 @@ def _generate_source_task_llm(classes):
                 "answer": result["answer"],
                 "points": FIPI_POINTS["source"],
                 "class": None,
+                "topic": "Источники",
                 "source_text": result.get("source_text", ""),
                 "source_title": result.get("source_title", ""),
                 "fipi_numbers": [17, 18, 19, 20, 21],

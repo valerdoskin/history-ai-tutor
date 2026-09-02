@@ -46,6 +46,16 @@ _QUESTION_BANK_JSON = os.path.join(
     "question_bank.json",
 )
 
+# Справочник по культуре: [{name, type, author, year, period, class, ...}]
+_CULTURE_JSON = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "knowledge",
+    "culture.json",
+)
+
+# Кэш записей по культуре
+_culture_cache = None
+
 # Кэш embeddings вопросов: {"questions": [...], "vecs": np.ndarray}
 _question_emb_cache = None
 
@@ -163,6 +173,96 @@ def _get_exam_questions_for_class(cls):
                     "paragraph": paragraph,
                 })
     return questions
+
+
+def _load_culture_records():
+    """Загружает справочник по культуре (с кэшем).
+
+    Возвращает список dict: {"name", "type", "author", "year", "period",
+    "class", "description", ...}.
+    """
+    global _culture_cache
+    if _culture_cache is not None:
+        return _culture_cache
+    records = []
+    if os.path.exists(_CULTURE_JSON):
+        try:
+            data = json.load(open(_CULTURE_JSON, encoding="utf-8"))
+            if isinstance(data, list):
+                records = data
+            elif isinstance(data, dict):
+                records = list(data.values())
+        except Exception as e:
+            logger.error(f"Не удалось загрузить справочник по культуре: {e}")
+    _culture_cache = records
+    return records
+
+
+def _culture_records_for_class(classes):
+    """Возвращает записи по культуре, отфильтрованные по классам."""
+    records = _load_culture_records()
+    if classes == "all":
+        return records
+    return [r for r in records if r.get("class") in classes]
+
+
+def _build_culture_mcq(record, classes):
+    """Строит MCQ по культуре: вопрос об авторе/годе/названии памятника.
+
+    Дистракторы берутся из того же класса, что и памятник (тематически
+    связанные). Возвращает dict MCQ с полем topic="Культура" (для
+    отслеживания слабых тем).
+    """
+    name = record.get("name", "")
+    author = record.get("author", "")
+    year = record.get("year", "")
+    cls = record.get("class")
+
+    # Дистракторы — из того же класса, что и памятник
+    same_class = [r for r in _culture_records_for_class(classes) if r.get("class") == cls]
+
+    if author:
+        question = f"Кто является автором памятника культуры «{name}»?"
+        answer = author
+        distractors = []
+        for other in same_class:
+            oa = other.get("author", "")
+            if oa and oa != author and oa not in distractors:
+                distractors.append(oa)
+            if len(distractors) >= 3:
+                break
+    elif year:
+        question = f"В каком году был создан памятник культуры «{name}»?"
+        answer = year
+        distractors = []
+        for other in same_class:
+            oy = other.get("year", "")
+            if oy and oy != year and oy not in distractors:
+                distractors.append(oy)
+            if len(distractors) >= 3:
+                break
+    else:
+        question = f"Как называется памятник культуры, описанный так: «{record.get('description', '')[:120]}»?"
+        answer = name
+        distractors = []
+        for other in same_class:
+            on = other.get("name", "")
+            if on and on != name and on not in distractors:
+                distractors.append(on)
+            if len(distractors) >= 3:
+                break
+
+    if len(distractors) < 3:
+        distractors = _fallback_distractors(
+            {"question": question, "answer": answer, "paragraph": ""},
+            cls,
+            classes if classes != "all" else ALL_CLASSES,
+            n=3,
+        )
+    mcq = _build_mcq_with_distractors(question, answer, distractors)
+    mcq["class"] = cls
+    mcq["topic"] = "Культура"
+    return mcq
 
 
 def _make_mcq(question, answer):
@@ -462,8 +562,23 @@ def generate_placement_test(user_id=None, num_questions=None):
         if not classes:
             classes = ALL_CLASSES
 
-    # Сколько вопросов на каждый класс
-    take = _questions_per_class(len(classes))
+    # Сколько вопросов на каждый класс. Если num_questions задан — распределяем
+    # его по классам равномерно (резервируя до 3 вопросов на культуру).
+    # Иначе — по числу выбранных классов (см. QUESTIONS_PER_CLASS_BY_COUNT).
+    if num_questions:
+        culture_slots = min(3, num_questions // 4)
+        if num_questions >= 4 and culture_slots < 1:
+            culture_slots = 1
+        class_slots = num_questions - culture_slots
+        base = class_slots // len(classes)
+        rem = class_slots % len(classes)
+        per_class = {}
+        for idx, cls in enumerate(classes):
+            per_class[cls] = base + (1 if idx < rem else 0)
+    else:
+        culture_slots = 3
+        take = _questions_per_class(len(classes))
+        per_class = {cls: take for cls in classes}
 
     # Собираем вопросы по классам: из реестра каждого класса случайно
     # выбираем нужное количество вопросов (без повторений в рамках теста).
@@ -488,7 +603,7 @@ def generate_placement_test(user_id=None, num_questions=None):
         unique_qs.sort(key=lambda q: q["question"])
         registry = unique_qs[:REGISTRY_SIZE]
         random.shuffle(registry)
-        for q in registry[:take]:
+        for q in registry[:per_class.get(cls, 0)]:
             questions.append((cls, q))
 
     # Строим MCQ с дистракторами, тематически связанными с вопросом.
@@ -507,6 +622,28 @@ def generate_placement_test(user_id=None, num_questions=None):
         mcq["id"] = i
         mcq["class"] = cls
         result.append(mcq)
+
+    # Добавляем 2-3 вопроса по культуре (из culture.json), чтобы тест уровня
+    # покрывал и культуру. Вопросы берутся из разных классов. При заданном
+    # num_questions добавляем не больше зарезервированных culture_slots.
+    culture_records = _culture_records_for_class(classes)
+    if culture_records:
+        max_culture = culture_slots if num_questions else 3
+        # Выбираем до max_culture записей из разных классов (по одной на класс)
+        by_class = {}
+        for r in culture_records:
+            by_class.setdefault(r.get("class"), []).append(r)
+        chosen = []
+        for cls in classes:
+            pool = by_class.get(cls)
+            if pool:
+                chosen.append(random.choice(pool))
+            if len(chosen) >= max_culture:
+                break
+        for rec in chosen:
+            mcq = _build_culture_mcq(rec, classes)
+            mcq["id"] = len(result)
+            result.append(mcq)
 
     # Сохраняем тест в кэш для последующей проверки
     if user_id:

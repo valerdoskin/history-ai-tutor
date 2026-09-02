@@ -755,14 +755,8 @@ def api_exam_submit():
         if user_id and user_id != "null":
             uid = int(user_id)
             progress_service.record_activity(uid)
-            db.add_exam_result(
-                uid,
-                exam_type,
-                question.get("question", ""),
-                user_answer,
-                correct_answer,
-                int(is_correct),
-                question.get("topic", ""),
+            adaptive_service.record_answer(
+                uid, exam_type, question, user_answer, correct_answer, is_correct
             )
             if result["correct"]:
                 progress_service.add_xp(uid, config.XP_PER_QUESTION)
@@ -835,14 +829,8 @@ def api_test_submit():
         if user_id and user_id != "null":
             uid = int(user_id)
             progress_service.record_activity(uid)
-            db.add_exam_result(
-                uid,
-                "test",
-                question.get("question", ""),
-                user_answer,
-                correct_answer,
-                int(correct),
-                question.get("topic", ""),
+            adaptive_service.record_answer(
+                uid, "test", question, user_answer, correct_answer, correct
             )
             if correct:
                 progress_service.add_xp(uid, config.XP_PER_QUESTION)

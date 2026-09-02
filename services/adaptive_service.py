@@ -16,6 +16,53 @@ logger = logging.getLogger(__name__)
 # Порог качества для SM-2 (ниже — карточка считается забытой)
 SRS_PASS_THRESHOLD = 3
 
+# Соответствие типа задания навыку/теме для отслеживания слабых мест.
+# Культура, карты, источники и аргументация выделены в отдельные навыки,
+# чтобы ошибки в них фиксировались как самостоятельные слабые темы.
+SKILL_TOPICS = {
+    "culture": "Культура",
+    "map": "Карты",
+    "source": "Источники",
+    "argumentation": "Аргументация",
+    "fact": "Факты и даты",
+    "chronology": "Хронология",
+    "cause_effect": "Причинно-следственные связи",
+    "understanding": "Понимание и анализ",
+    "comparison": "Сравнение",
+    "term": "Термины и понятия",
+}
+
+
+def topic_for_question(question):
+    """Определяет тему/навык вопроса для отслеживания слабых мест.
+
+    Приоритет — явное поле topic (например, «Культура» у вопросов из
+    culture.json). Если его нет — выводим тему из типа задания.
+    """
+    topic = (question or {}).get("topic") or ""
+    if topic:
+        return topic
+    qtype = (question or {}).get("type") or ""
+    return SKILL_TOPICS.get(qtype, "")
+
+
+def record_answer(user_id, exam_type, question, user_answer, correct_answer, is_correct):
+    """Записывает результат ответа и обновляет слабые темы.
+
+    Тема определяется по вопросу (поле topic или тип задания). Если ученик
+    ошибся в вопросе культуры — «Культура» фиксируется как слабая тема.
+    """
+    topic = topic_for_question(question)
+    db.add_exam_result(
+        user_id,
+        exam_type,
+        (question or {}).get("question", ""),
+        user_answer,
+        correct_answer,
+        int(is_correct),
+        topic,
+    )
+
 
 def estimate_level(user_id):
     """
