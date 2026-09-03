@@ -1075,3 +1075,115 @@ body {
     margin-top: 12px;
     flex-wrap: wrap;
 }
+
+/* ============================================================
+   Адаптивность (мобильные / планшеты / ПК)
+   Базовые стили выше рассчитаны на мобильные (≤480px).
+   Медиа-запросы ниже расширяют интерфейс для больших экранов.
+   ============================================================ */
+
+/* Планшеты и небольшие десктопы */
+@media (min-width: 481px) {
+    .app {
+        max-width: 720px;
+    }
+}
+
+/* Десктопы и широкие экраны */
+@media (min-width: 769px) {
+    .app {
+        max-width: 1000px;
+        padding: 24px;
+    }
+
+    .header h1 {
+        font-size: 28px;
+    }
+
+    .subtitle {
+        font-size: 15px;
+    }
+
+    .tab {
+        font-size: 15px;
+        padding: 12px 8px;
+    }
+
+    .chat-input input {
+        font-size: 15px;
+    }
+
+    .message {
+        max-width: min(85%, 720px);
+    }
+
+    .bubble {
+        font-size: 15px;
+    }
+
+    .practice-content {
+        padding: 4px 8px;
+    }
+
+    .test-card,
+    .placement-card,
+    .card-item {
+        padding: 24px;
+    }
+
+    .test-question,
+    .placement-question,
+    .card-question {
+        font-size: 18px;
+    }
+
+    .test-option,
+    .placement-option,
+    .option {
+        padding: 14px 16px;
+        font-size: 15px;
+    }
+
+    .test-source {
+        font-size: 15px;
+        padding: 14px;
+    }
+
+    .test-textarea {
+        min-height: 140px;
+    }
+
+    .test-input {
+        padding: 14px;
+        font-size: 15px;
+    }
+
+    .topic-item,
+    .paragraph,
+    .chronology-item,
+    .figure-item,
+    .term-item {
+        padding: 14px 16px;
+    }
+
+    .topic-title {
+        font-size: 16px;
+    }
+
+    .class-option {
+        padding: 14px 16px;
+    }
+
+    .profile-card {
+        padding: 24px;
+    }
+
+    .train-modes {
+        padding: 18px;
+    }
+
+    .train-mode {
+        font-size: 14px;
+        padding: 12px 10px;
+    }
+}
