@@ -913,3 +913,247 @@ async function submitPlacement() {
 
 document.getElementById('classes-save-btn').addEventListener('click', saveClasses);
 document.getElementById('placement-btn').addEventListener('click', startPlacement);
+
+// ============================================================
+// Тренировочные режимы по типам заданий (Этап 7)
+// ============================================================
+let trainQtype = null;
+let trainQuestions = [];
+let trainIndex = 0;
+let trainResults = [];
+let trainExamType = 'oge';
+
+const trainModeButtons = document.querySelectorAll('.train-mode');
+const trainStartBtn = document.getElementById('train-start-btn');
+
+// Выбор типа задания
+trainModeButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        trainModeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        trainQtype = btn.dataset.qtype;
+        trainStartBtn.disabled = false;
+    });
+});
+
+// Начать тренировку
+trainStartBtn.addEventListener('click', startTrain);
+
+async function startTrain() {
+    if (!trainQtype) return;
+    trainExamType = document.getElementById('exam-type').value;
+    const content = document.getElementById('practice-content');
+    content.innerHTML = '<p class="hint">Генерация тренировочных заданий...</p>';
+    try {
+        const resp = await fetch(`/api/train?type=${trainExamType}&qtype=${trainQtype}&count=5&user_id=${userId}`);
+        const data = await resp.json();
+        if (data.error) {
+            content.innerHTML = `<p class="hint">${data.error}</p>`;
+            return;
+        }
+        trainQuestions = data.questions || [];
+        trainIndex = 0;
+        trainResults = [];
+        if (!trainQuestions.length) {
+            content.innerHTML = '<p class="hint">Не удалось сгенерировать задания. Попробуй ещё раз.</p>';
+            return;
+        }
+        renderTrainQuestion();
+    } catch (e) {
+        content.innerHTML = '<p class="hint">Ошибка генерации тренировочных заданий.</p>';
+    }
+}
+
+function getTrainTypeLabel(qtype) {
+    const labels = {
+        'culture': 'Культура',
+        'map': 'Карты',
+        'source': 'Источники',
+        'argumentation': 'Аргументация',
+        'chronology': 'Хронология',
+        'cause_effect': 'Причинно-следственные связи',
+        'comparison': 'Сравнение',
+    };
+    return labels[qtype] || qtype;
+}
+
+function renderTrainQuestion() {
+    const content = document.getElementById('practice-content');
+    const q = trainQuestions[trainIndex];
+    if (!q) {
+        showTrainResult();
+        return;
+    }
+    const progressPct = Math.round((trainIndex / trainQuestions.length) * 100);
+    const typeLabel = getTypeLabel(q.type);
+    const modeLabel = getTrainTypeLabel(trainQtype);
+    let body = '';
+
+    if (q.type === 'mcq' && q.options) {
+        body = `
+            <div class="test-options">
+                ${q.options.map((opt, i) => `
+                    <button class="test-option" data-idx="${i}" data-correct="${i === q.correct_index}">${i + 1}. ${opt}</button>
+                `).join('')}
+            </div>
+        `;
+    } else if (q.type === 'short') {
+        body = `
+            <input type="text" class="test-input" id="train-short-answer" placeholder="Введи ответ...">
+            <button class="btn-primary" id="train-short-check">Проверить</button>
+        `;
+    } else if (q.type === 'source') {
+        body = `
+            ${q.source_text ? `<div class="test-source">${q.source_text}</div>` : ''}
+            <textarea class="test-textarea" id="train-open-answer" placeholder="Введи развёрнутый ответ..."></textarea>
+            <button class="btn-primary" id="train-open-check">Проверить</button>
+        `;
+    }
+
+    content.innerHTML = `
+        <div class="test-card">
+            <div class="test-progress">Вопрос ${trainIndex + 1} из ${trainQuestions.length}</div>
+            <div class="test-progress-bar"><div class="test-progress-fill" style="width:${progressPct}%"></div></div>
+            <div>
+                <span class="train-badge">${modeLabel}</span>
+                <span class="test-type-badge">${typeLabel}</span>
+            </div>
+            <div class="test-question">${q.question}</div>
+            ${body}
+            <div class="test-feedback" id="train-feedback"></div>
+            <div class="test-nav">
+                <button class="btn-secondary" id="train-prev" ${trainIndex === 0 ? 'disabled' : ''}>← Назад</button>
+                <button class="btn-primary" id="train-next" style="display:none">Далее →</button>
+            </div>
+        </div>
+    `;
+
+    const prevBtn = document.getElementById('train-prev');
+    prevBtn.addEventListener('click', () => {
+        if (trainIndex > 0) {
+            trainIndex--;
+            renderTrainQuestion();
+        }
+    });
+
+    if (q.type === 'mcq' && q.options) {
+        document.querySelectorAll('.test-option').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const idx = parseInt(btn.dataset.idx, 10);
+                const answer = idx + 1;
+                document.querySelectorAll('.test-option').forEach(b => b.disabled = true);
+                const result = await submitTrainAnswer(q, answer);
+                if (result.correct) {
+                    btn.classList.add('correct');
+                } else {
+                    btn.classList.add('wrong');
+                    document.querySelector(`.test-option[data-correct="true"]`).classList.add('correct');
+                }
+                showTrainFeedback(result, q);
+            });
+        });
+    } else if (q.type === 'short') {
+        document.getElementById('train-short-check').addEventListener('click', async () => {
+            const answer = document.getElementById('train-short-answer').value.trim();
+            if (!answer) return;
+            const result = await submitTrainAnswer(q, answer);
+            showTrainFeedback(result, q);
+        });
+    } else if (q.type === 'source') {
+        document.getElementById('train-open-check').addEventListener('click', async () => {
+            const answer = document.getElementById('train-open-answer').value.trim();
+            if (!answer) return;
+            const result = await submitTrainAnswer(q, answer);
+            showTrainFeedback(result, q);
+        });
+    }
+}
+
+async function submitTrainAnswer(q, answer) {
+    try {
+        const resp = await fetch('/api/test/submit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, question: q, answer }),
+        });
+        const data = await resp.json();
+        trainResults.push({
+            question: q,
+            user_answer: answer,
+            correct: data.correct,
+            earned: data.earned || 0,
+            points: data.points || 1,
+            feedback: data.feedback || '',
+        });
+        return data;
+    } catch (e) {
+        trainResults.push({
+            question: q,
+            user_answer: answer,
+            correct: false,
+            earned: 0,
+            points: q.points || 1,
+            feedback: 'Ошибка соединения',
+        });
+        return { correct: false, earned: 0, points: q.points || 1, feedback: 'Ошибка соединения' };
+    }
+}
+
+function showTrainFeedback(result, q) {
+    const feedback = document.getElementById('train-feedback');
+    const nextBtn = document.getElementById('train-next');
+    if (result.correct) {
+        feedback.className = 'test-feedback correct';
+        feedback.textContent = '✅ Верно!';
+    } else {
+        feedback.className = 'test-feedback wrong';
+        if (q.type === 'source') {
+            feedback.textContent = '❌ Неверно. ' + (result.feedback || '') + ' Правильный ответ: ' + (q.answer || '');
+        } else {
+            feedback.textContent = '❌ Неверно. Правильный ответ: ' + (q.answer || '');
+        }
+    }
+    nextBtn.style.display = 'inline-block';
+    nextBtn.addEventListener('click', () => {
+        trainIndex++;
+        renderTrainQuestion();
+    });
+}
+
+function showTrainResult() {
+    const content = document.getElementById('practice-content');
+    let correctCount = 0;
+    trainResults.forEach(r => { if (r.correct) correctCount++; });
+
+    const detailHtml = trainResults.map((r, i) => {
+        const status = r.correct ? '✅ Верно' : '❌ Неверно';
+        const statusClass = r.correct ? 'correct' : 'wrong';
+        const correctAnswer = r.question.answer || (r.question.options && r.question.options[r.question.correct_index]) || '';
+        return `
+            <div class="test-detail-item">
+                <div class="test-detail-q">${i + 1}. ${r.question.question}</div>
+                <div class="test-detail-status ${statusClass}">${status}</div>
+                ${!r.correct && correctAnswer ? `<div class="test-detail-answer">Правильный ответ: ${correctAnswer}</div>` : ''}
+            </div>
+        `;
+    }).join('');
+
+    content.innerHTML = `
+        <div class="test-result">
+            <h3>🎉 Тренировка завершена!</h3>
+            <div class="test-score">Правильных ответов: <strong>${correctCount}</strong> из ${trainResults.length}</div>
+            <div class="train-result-actions">
+                <button class="btn-primary" id="train-restart">🔄 Ещё раз</button>
+                <button class="btn-secondary" id="train-back">🎯 Выбрать другой тип</button>
+            </div>
+            <div class="test-detail">
+                <h3 style="text-align:left">📋 Разбор ошибок</h3>
+                ${detailHtml}
+            </div>
+        </div>
+    `;
+    document.getElementById('train-restart').addEventListener('click', startTrain);
+    document.getElementById('train-back').addEventListener('click', () => {
+        content.innerHTML = '<p class="hint">Выбери тип задания и начни тренировку!</p>';
+    });
+}

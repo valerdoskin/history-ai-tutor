@@ -1009,3 +1009,69 @@ body {
     color: #bbb;
     font-size: 13px;
 }
+
+/* ============================================================
+Тренировочные режимы по типам заданий (Этап 7)
+============================================================ */
+.train-modes {
+    margin: 14px 0;
+    padding: 14px;
+    background: #232342;
+    border-radius: 12px;
+}
+.train-modes-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #eee;
+    margin-bottom: 10px;
+}
+.train-modes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.train-mode {
+    padding: 10px 8px;
+    border: 1px solid #3a3a5c;
+    border-radius: 10px;
+    background: #2a2a4a;
+    color: #ddd;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+}
+.train-mode:hover {
+    background: #34345a;
+    border-color: #5a5a8a;
+}
+.train-mode.active {
+    background: #4a6cf7;
+    border-color: #4a6cf7;
+    color: #fff;
+}
+.train-modes-actions {
+    display: flex;
+    justify-content: center;
+}
+.train-modes-actions .btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.train-badge {
+    display: inline-block;
+    background: #4a6cf7;
+    color: #fff;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+.train-result-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}

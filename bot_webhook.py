@@ -595,6 +595,109 @@ def api_exam_types():
     return jsonify({"types": exam_service.get_question_types()})
 
 
+# Типы заданий, доступные в тренировочных режимах (Этап 7)
+TRAIN_TYPES = [
+    {"qtype": "culture", "label": "Культура", "oge": [13, 14], "ege": [7, 15, 16]},
+    {"qtype": "map", "label": "Карты", "oge": [8, 9, 10], "ege": [9, 10, 11, 12]},
+    {"qtype": "source", "label": "Источники", "oge": [17, 18, 19, 20], "ege": [6, 13, 14]},
+    {"qtype": "argumentation", "label": "Аргументация", "oge": [6], "ege": [21]},
+    {"qtype": "chronology", "label": "Хронология", "oge": [1, 2], "ege": [1, 2]},
+    {"qtype": "cause_effect", "label": "Причинно-следственные связи", "oge": [21], "ege": [18]},
+    {"qtype": "comparison", "label": "Сравнение", "oge": [23], "ege": [20]},
+]
+
+
+def _train_question(exam_type, qtype, classes):
+    """Генерирует одно тренировочное задание нужного типа.
+
+    Возвращает задание в формате, совместимом с /api/test/submit
+    (type: mcq / short / source). Если сгенерировать не удалось — None.
+    """
+    if qtype == "culture":
+        if exam_type == "oge":
+            q = exam_service.generate_culture_question(classes=classes)
+            if q:
+                q["type"] = "mcq"
+        else:
+            q = exam_service.generate_ege_question(qtype="culture", classes=classes)
+            if q:
+                q["type"] = "short"
+    elif qtype == "map":
+        q = exam_service.generate_map_question(classes=classes)
+        if q:
+            q["type"] = "mcq"
+    elif qtype == "source":
+        q = exam_service.generate_source_question(classes=classes)
+        if q:
+            q["type"] = "source"
+    elif qtype == "argumentation":
+        if exam_type == "oge":
+            q = exam_service.generate_oge_question(qtype="argumentation", classes=classes)
+            if q:
+                q["type"] = "mcq"
+        else:
+            q = exam_service.generate_argumentation_question(classes=classes)
+            if q:
+                q["type"] = "short"
+    else:
+        # chronology / cause_effect / comparison / term / fact
+        if exam_type == "oge":
+            q = exam_service.generate_oge_question(qtype=qtype, classes=classes)
+            if q:
+                q["type"] = "mcq"
+        else:
+            q = exam_service.generate_ege_question(qtype=qtype, classes=classes)
+            if q:
+                q["type"] = "short"
+    if q:
+        q["points"] = 1
+    return q
+
+
+@app.route("/api/train", methods=["GET"])
+def api_train():
+    """API для Web App: серия тренировочных заданий одного типа.
+
+    Параметры: type (oge/ege), qtype (culture/map/source/...), count,
+    user_id. Возвращает {"questions": [...], "qtype": ..., "exam_type": ...}.
+    """
+    exam_type = request.args.get("type", "oge")
+    qtype = request.args.get("qtype")
+    user_id = request.args.get("user_id")
+    count = request.args.get("count", default=5, type=int)
+    count = max(1, min(10, count))
+    if qtype not in {t["qtype"] for t in TRAIN_TYPES}:
+        return jsonify({"error": "Неизвестный тип задания"}), 400
+    try:
+        classes = "all"
+        if user_id and user_id != "null":
+            classes = db.get_selected_classes(int(user_id))
+        questions = []
+        seen = set()
+        attempts = 0
+        while len(questions) < count and attempts < count * 5:
+            attempts += 1
+            q = _train_question(exam_type, qtype, classes)
+            if not q or not q.get("question"):
+                continue
+            # Пропускаем некорректные/повторяющиеся вопросы
+            key = str(q.get("question", ""))[:80]
+            if key in seen:
+                continue
+            if q.get("type") == "mcq" and (not q.get("options") or q.get("correct_index") is None):
+                continue
+            if q.get("type") in ("short", "source") and not q.get("answer"):
+                continue
+            seen.add(key)
+            questions.append(q)
+        if user_id and user_id != "null":
+            progress_service.record_activity(int(user_id))
+        return jsonify({"questions": questions, "qtype": qtype, "exam_type": exam_type})
+    except Exception as e:
+        logger.error(f"Ошибка генерации тренировочных заданий: {e}")
+        return jsonify({"error": "Не удалось сгенерировать тренировочные задания"}), 500
+
+
 @app.route("/api/topics", methods=["GET"])
 def api_topics():
     """API для Web App: список тем (глав) из базы знаний.

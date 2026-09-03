@@ -55,6 +55,24 @@
                 <button id="practice-btn" class="btn-primary">Начать практику</button>
                 <button id="full-test-btn" class="btn-secondary">📝 Полноценный тест (10 заданий)</button>
             </div>
+
+            <!-- Тренировочные режимы по типам заданий (Этап 7) -->
+            <div class="train-modes">
+                <div class="train-modes-title">🎯 Тренировка по типам заданий</div>
+                <div class="train-modes-grid" id="train-modes-grid">
+                    <button class="train-mode" data-qtype="culture">🏛️ Культура</button>
+                    <button class="train-mode" data-qtype="map">🗺️ Карты</button>
+                    <button class="train-mode" data-qtype="source">📜 Источники</button>
+                    <button class="train-mode" data-qtype="argumentation">💬 Аргументация</button>
+                    <button class="train-mode" data-qtype="chronology">📅 Хронология</button>
+                    <button class="train-mode" data-qtype="cause_effect">🔗 Причины и следствия</button>
+                    <button class="train-mode" data-qtype="comparison">⚖️ Сравнение</button>
+                </div>
+                <div class="train-modes-actions">
+                    <button id="train-start-btn" class="btn-primary" disabled>▶️ Начать тренировку (5 заданий)</button>
+                </div>
+            </div>
+
             <div id="practice-content" class="practice-content">
                 <p class="hint">Выбери формат экзамена и начни практику, либо пройди полноценный тест из 10 заданий!</p>
             </div>
