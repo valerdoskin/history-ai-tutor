@@ -1086,6 +1086,24 @@ body {
 @media (min-width: 481px) {
     .app {
         max-width: 720px;
+        /* Прокрутка всей страницы вместо внутренних окон */
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* Контент вкладок не обрезается и не создаёт внутреннюю прокрутку */
+    .tab-content {
+        overflow: visible;
+    }
+
+    .chat-messages,
+    .practice-content,
+    .topics-content,
+    .cards-content,
+    .placement-content,
+    .profile-content,
+    #tab-classes {
+        overflow: visible;
     }
 }
 
@@ -1094,6 +1112,24 @@ body {
     .app {
         max-width: 1000px;
         padding: 24px;
+        /* Прокрутка всей страницы вместо внутренних окон */
+        height: auto;
+        min-height: 100vh;
+    }
+
+    /* Контент вкладок не обрезается и не создаёт внутреннюю прокрутку */
+    .tab-content {
+        overflow: visible;
+    }
+
+    .chat-messages,
+    .practice-content,
+    .topics-content,
+    .cards-content,
+    .placement-content,
+    .profile-content,
+    #tab-classes {
+        overflow: visible;
     }
 
     .header h1 {
