@@ -99,18 +99,30 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
 ## 3. Текущее состояние (проверено 2026-09-02)
 
 ### Git
-- **Ветка:** `main`, последний коммит `8a29eec` (Этап 8: Связать metadata чанков с кодификатором ФИПИ 2026).
-- **Git status:** чистое рабочее дерево (нет незакоммиченных изменений).
-- История коммитов (Этапы 1-8): `8a29eec` (Этап 8) -> `c949da4` (Этап 7) -> `b11d2f3` (Этап 6)
-  -> `f2b21e1` (Этап 5) -> `653893f` (Этап 4) -> `d4c6e19` (Этап 3) -> `182a810` (Этап 2)
-  -> `079d5cc` (Этап 1).
+- **Ветка:** `main`, последний коммит `0f219ca` (Обновить CONTEXT_FOR_NEW_AGENT.md: адаптивность под ПК выполнена).
+- **Git status:** рабочее дерево содержит незакоммиченные изменения (см. ниже).
+- История коммитов: `0f219ca` -> `9532e25` (адаптивность, 2-я итерация) -> `4769c89` (адаптивность,
+  1-я итерация) -> `7b36ffb` (промты + CONTEXT) -> `8a29eec` (Этап 8) -> `c949da4` (Этап 7)
+  -> `b11d2f3` (Этап 6) -> `f2b21e1` (Этап 5) -> `653893f` (Этап 4) -> `d4c6e19` (Этап 3)
+  -> `182a810` (Этап 2) -> `079d5cc` (Этап 1).
+- **Незакоммиченные изменения (текущая работа — предварительная генерация map-вопросов):**
+  - `scripts/pregen_map_questions.py` (новый файл) — скрипт предварительной генерации map-вопросов.
+  - `services/exam_service.py` — `_registry_questions()` возвращает поле `image`; `generate_map_question()`
+    сначала проверяет банк вопросов типа map с image, при отсутствии — fallback на лету из maps.json.
+  - `knowledge/question_bank.json` — добавлены 2 новых map-вопроса с image (1296 -> 1298).
+  - `knowledge/maps.json` — 2 записи получили поле `image` (greek_colonization.png, alexander_macedon.png).
+  - `static/maps/` (новая папка) — greek_colonization.png, alexander_macedon.png.
+  - `bot_webhook.py`, `static/webapp.js`, `static/webapp.css` — поддержка отображения image в вопросах.
 - Папка `knowledge/fipi_official/` в `.gitignore` (PDF ФИПИ не коммитим).
 - `tutor_bot.db` в `.gitignore` (`*.db`), не отслеживается git.
 
 ### Flask-сервер
-- **Запущен:** PID 5449 (`python3 -c "from bot_webhook import app; app.run(...)"`), порт 44167.
+- **Запущен:** PID 62598 (`python3 -c "from bot_webhook import app; app.run(...)"`), порт 44167.
 - `/api/health` отвечает `{"status":"ok"}`.
 - Все API-роуты отвечают HTTP 200 (проверено через curl).
+- **Проверено:** `/api/exam?qtype=map&classes=5` и `/api/train?qtype=map&classes=5` возвращают
+  предварительно сгенерированные map-вопросы с полем `image` (greek_colonization.png,
+  alexander_macedon.png). Фронтенд корректно отображает карту в тренировке.
 
 ### База знаний (chunks.json)
 - **Всего чанков: 6667** (список словарей).
@@ -128,11 +140,17 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
   paragraph_title, paragraph_number, page_start, page_end, main_question, metadata`.
 
 ### Банк вопросов (question_bank.json)
-- **dict из 1295 вопросов.** Формат: `{вопрос: {class, answer, type, distractors}}`.
+- **dict из 1298 вопросов.** Формат: `{вопрос: {class, answer, type, distractors}}`.
 - По типам: `fact` — 599, `cause_effect` — 348, `understanding` — 132, `term` — 94,
-  `chronology` — 41, `comparison` — 31, `culture` — 30, `argumentation` — 20.
-- По классам: 5 — 179, 6 — 157, 7 — 146, 8 — 181, 9 — 186, 10 — 161, 11 — 155.
-- **Схема валидна:** 1295 записей, 0 нарушений схемы `{вопрос: {class, answer, type, distractors}}`.
+  `chronology` — 41, `comparison` — 31, `culture` — 30, `argumentation` — 20, `map` — 2 (с image).
+- По классам: 5 — 181 (включая 2 новых map-вопроса), 6 — 157, 7 — 146, 8 — 181, 9 — 186,
+  10 — 161, 11 — 155.
+- **Схема валидна:** 1298 записей, 0 нарушений схемы `{вопрос: {class, answer, type, distractors}}`.
+- **Новые map-вопросы с image (класс 5):**
+  - «Как назывался регион, где греческие колонии появились на побережье Италии и Сицилии?»
+    → «Великая Греция», image `/static/maps/greek_colonization.png`.
+  - «Какое событие показано на карте?» → «Походы Александра Македонского на Восток»,
+    image `/static/maps/alexander_macedon.png`.
 - **ВАЖНО:** `llm_distractors.json` больше НЕ существует — он объединён в `question_bank.json`
   (коммит `696c729`). Дистракторы хранятся в поле `distractors` каждой записи.
 - **Примечание:** во время браузерного тестирования Этапа 9 запущенный сервер автоматически
@@ -151,6 +169,11 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
   type: architecture | painting | sculpture | literature | music | science.
 - `knowledge/maps.json` — **список из 188 записей** (не dict). Структура записи:
   `{name, period, class, description, key_objects, fipi_codes, source_chunk_id}`.
+  - **2 записи имеют поле `image`** (извлечены из PDF-учебников): `greek_colonization.png`
+    (Великая греческая колонизация) и `alexander_macedon.png` (Походы Александра Македонского).
+  - Все 188 записей имеют `source_chunk_id`, точно совпадающий с id чанка в chunks.json
+    (в source_chunk_id используется табуляция `\t`). По source_chunk_id можно найти чанк,
+    а по paragraph_title и source_file — собрать весь текст параграфа.
 
 ### Кодификатор ФИПИ (fipi_codifier.json)
 - **Обновлён под структуру 2026** (Этап 1, коммит `079d5cc`).
@@ -268,6 +291,36 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
   (7 классов + тест уровня), Профиль (уровень, XP, серия, точность, достижения).
 - Все API-роуты отвечают HTTP 200.
 
+### 4.9. Адаптивность веб-интерфейса под ПК (промт PROMPT_RESPONSIVE_UI.md)
+- **1-я итерация** (коммит `4769c89`): `.app` расширен до 720px/1000px.
+- **2-я итерация** (коммит `9532e25`): прокрутка всей страницы вместо внутренних окон —
+  `.app` на `height:auto; min-height:100vh`, `overflow:visible` у контейнеров.
+- Проверено в браузере на 1280px во всех 6 вкладках: внутренняя полоса прокрутки исчезла,
+  страница прокручивается целиком. Мобильная версия (≤480px) не изменена.
+
+### 4.10. Предварительная генерация map-вопросов с изображениями карт (2026-09-02)
+- **Создан скрипт `scripts/pregen_map_questions.py`** — для каждой записи maps.json с полем `image`
+  находит текст параграфа по source_chunk_id (собирает все чанки параграфа из chunks.json),
+  генерирует вопрос через LLM (DeepSeek → Groq) на основе текста параграфа + описания карты,
+  сохраняет в question_bank.json с полем `image`. Сохраняет после каждой записи.
+  Аргументы: `--mock` (режим заглушки), `--limit N` (обработать только N записей).
+- **Извлечены 2 карты из PDF-учебников** (5 класс, «История Древнего мира»):
+  - `static/maps/greek_colonization.png` — «Великая греческая колонизация» (стр. 142).
+  - `static/maps/alexander_macedon.png` — «Походы Александра Македонского» (стр. 202).
+- **Изменён `services/exam_service.py`:**
+  - `_registry_questions()` (строка 244) — добавлено поле `image` в результат (строка 265).
+  - `generate_map_question()` (строка 540) — сначала проверяет банк вопросов типа map с image
+    (через `_registry_questions`), при наличии берёт случайный; при отсутствии — fallback на лету
+    из maps.json.
+- **Сгенерированы 2 map-вопроса через LLM (DeepSeek)** и добавлены в question_bank.json:
+  - «Как назывался регион, где греческие колонии появились на побережье Италии и Сицилии?»
+    → «Великая Греция» (image greek_colonization.png).
+  - «Какое событие показано на карте?» → «Походы Александра Македонского на Восток»
+    (image alexander_macedon.png).
+- **Проверено:** `/api/exam?qtype=map&classes=5` и `/api/train?qtype=map&classes=5` возвращают
+  предварительно сгенерированные вопросы с image; для класса 6 работает fallback на лету.
+  Фронтенд корректно отображает карту в тренировке (проверено в браузере).
+
 ---
 
 ## 5. Что НУЖНО СДЕЛАТЬ ДАЛЬШЕ (утверждённый план)
@@ -350,9 +403,11 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
 | `static/webapp.js` | Логика веб-интерфейса |
 | `knowledge/chunks.json` | База знаний (6667 чанков, все с валидными fipi_codes) |
 | `knowledge/enriched.json` | Обогащённые параграфы (358) |
-| `knowledge/question_bank.json` | Банк вопросов (1295) |
+| `knowledge/question_bank.json` | Банк вопросов (1298, включая 2 map-вопроса с image) |
 | `knowledge/culture.json` | Справочник по культуре (1125 записей, список) |
-| `knowledge/maps.json` | Справочник по картам (188 записей, список) |
+| `knowledge/maps.json` | Справочник по картам (188 записей, список; 2 с полем image) |
+| `static/maps/` | Изображения карт (greek_colonization.png, alexander_macedon.png) |
+| `scripts/pregen_map_questions.py` | Предварительная генерация map-вопросов через LLM |
 | `knowledge/source_questions.json` | Источники (28) |
 | `knowledge/fipi_codifier.json` | Кодификатор ФИПИ 2026 (обновлён в Этапе 1) |
 | `knowledge/fipi_official/` | Официальные PDF ФИПИ 2026 (в .gitignore) |
@@ -435,6 +490,9 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
 | 10 | Создать подробную инструкцию для нового разговора (этот документ) | **done** |
 | 11 | Адаптивность веб-интерфейса под ПК (промт PROMPT_RESPONSIVE_UI.md), 1-я итерация | **done** (коммит `4769c89`) |
 | 12 | Адаптивность веб-интерфейса под ПК, 2-я итерация — прокрутка всей страницы | **done** (коммит `9532e25`) |
+| 13 | Закоммитить оба промта + обновлённый CONTEXT_FOR_NEW_AGENT.md, откатить question_bank.json | **done** (коммит `7b36ffb`) |
+| 14 | Выполнить промт PROMPT_RESPONSIVE_UI.md (адаптивность под ПК) | **done** (коммиты `4769c89`, `9532e25`) |
+| 15 | Создать скрипт предварительной генерации map-вопросов (scripts/pregen_map_questions.py) | **in_progress** (скрипт создан, 2 вопроса сгенерированы, API проверен) |
 
 ---
 
@@ -454,15 +512,17 @@ cd /workspace/history-ai-tutor && python3 rebuild_qdrant.py --chunks knowledge/c
       внутренних контейнеров `overflow` изменён на `visible` — теперь страница прокручивается
       целиком, внутренняя полоса прокрутки исчезла. Проверено в браузере на 1280px во всех 6
       вкладках. Мобильная версия (≤480px) не изменена.
-- [ ] **Показать изображения карт в тренировке (вариант (б) из PROMPT_MAP_IMAGES.md)** — НЕ
-      выполнено. maps.json не содержит поля `image`, exam_service.generate_map_question() строит
-      вопрос по текстовому description. Требуется: извлечь изображения из PDF (pdfplumber+PIL
-      установлены), добавить поле `image` в maps.json, передавать изображение в /api/train и
-      отображать его на фронтенде.
+- [x] **Показать изображения карт в тренировке (вариант (б) из PROMPT_MAP_IMAGES.md)** — ЧАСТИЧНО
+      выполнено (пилот на 2 картах). Создан скрипт `scripts/pregen_map_questions.py`, извлечены
+      2 карты из PDF (greek_colonization.png, alexander_macedon.png), сгенерированы 2 map-вопроса
+      через LLM, добавлены в question_bank.json с полем `image`. exam_service.generate_map_question()
+      теперь сначала берёт из банка вопросы с image, при отсутствии — fallback на лету из maps.json.
+      Фронтенд отображает карту. **Осталось:** расширить количество карт с изображениями (сейчас
+      только 2 из 188) — извлечь карты из PDF-учебников для записей, где карты точно есть.
 - [ ] Пройти тест уровня в браузере до конца (все 24 вопроса) — функциональность подтверждена
       через API и юнит-тесты, но полный проход в UI не завершён.
-- [ ] Расширить банк вопросов дальше (сейчас 1295) — например, добавить больше вопросов по
-      культуре и картам (сейчас culture=30, map в реестре пуст для OGE/EGE).
+- [ ] Расширить банк вопросов дальше (сейчас 1298) — например, добавить больше вопросов по
+      культуре и картам (сейчас culture=30, map=2 с image).
 - [ ] Улучшить качество автогенерируемых дистракторов для chronology-вопросов (при тестировании
       сервер добавлял не всегда корректные дистракторы — см. раздел 3).
 - [ ] Интеграция с Telegram-ботом (проверка работы новых режимов через Telegram Web App).

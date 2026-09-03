@@ -15,7 +15,8 @@
       "Танаис"
     ],
     "fipi_codes": [],
-    "source_chunk_id": "world_history::III::§\tВеликая греческая колонизация::0"
+    "source_chunk_id": "world_history::III::§\tВеликая греческая колонизация::0",
+    "image": "/static/maps/greek_colonization.png"
   },
   {
     "name": "Греко-персидские войны",
@@ -51,7 +52,8 @@
       "Индия"
     ],
     "fipi_codes": [],
-    "source_chunk_id": "world_history::III::§\tПоходы Александра Македонского на Восток::0"
+    "source_chunk_id": "world_history::III::§\tПоходы Александра Македонского на Восток::0",
+    "image": "/static/maps/alexander_macedon.png"
   },
   {
     "name": "Завоевание Римом Италии",

@@ -262,6 +262,7 @@ def _registry_questions(qtype=None, classes=None):
             "class": info.get("class"),
             "type": info.get("type"),
             "distractors": info.get("distractors", []),
+            "image": info.get("image"),
         })
     return result
 
@@ -537,18 +538,42 @@ def _map_records_for_class(classes):
 
 
 def generate_map_question(classes=None):
-    """Генерирует задание по исторической карте из maps.json.
+    """Генерирует задание по исторической карте.
 
-    Берёт случайную карту и составляет вопрос по её описанию.
+    Сначала пробует взять предварительно сгенерированный вопрос из банка
+    (question_bank.json, тип "map" с полем image). Если таких вопросов нет —
+    составляет вопрос на лету по описанию карты из maps.json.
     Возвращает MCQ.
     """
+    # 1) Пробуем взять предварительно сгенерированный вопрос из банка
+    bank_qs = _registry_questions(qtype="map", classes=classes)
+    bank_qs = [q for q in bank_qs if q.get("image")]
+    if bank_qs:
+        q = random.choice(bank_qs)
+        distractors = q.get("distractors") or []
+        if len(distractors) < 3:
+            distractors = placement_service._fallback_distractors(
+                {"question": q["question"], "answer": q["answer"], "paragraph": ""},
+                q.get("class"),
+                classes if classes != "all" else placement_service.ALL_CLASSES,
+                n=3,
+            )
+        mcq = _build_mcq(q["question"], q["answer"], distractors)
+        mcq["type"] = "map"
+        mcq["class"] = q.get("class")
+        mcq["topic"] = "Карты"
+        mcq["fipi_numbers"] = TYPE_TO_FIPI["map"].get("oge", [])
+        if q.get("image"):
+            mcq["image"] = q["image"]
+        return mcq
+
+    # 2) Fallback: составляем вопрос на лету по описанию карты из maps.json
     records = _map_records_for_class(classes)
     if not records:
         return None
     r = random.choice(records)
     name = r.get("name", "")
     description = r.get("description", "")
-    key_objects = r.get("key_objects", [])
     cls = r.get("class")
 
     # Вопрос: по описанию карты определить, какое событие/поход показано
@@ -577,6 +602,9 @@ def generate_map_question(classes=None):
     mcq["class"] = cls
     mcq["topic"] = "Карты"
     mcq["fipi_numbers"] = TYPE_TO_FIPI["map"].get("oge", [])
+    image = r.get("image")
+    if image:
+        mcq["image"] = image
     return mcq
 
 

@@ -577,7 +577,9 @@ def api_exam():
         classes = "all"
         if user_id and user_id != "null":
             classes = db.get_selected_classes(int(user_id))
-        if exam_type == "ege":
+        if qtype == "map":
+            question = exam_service.generate_map_question(classes=classes)
+        elif exam_type == "ege":
             question = exam_service.generate_ege_question(qtype=qtype, classes=classes)
         else:
             question = exam_service.generate_oge_question(qtype=qtype, classes=classes)

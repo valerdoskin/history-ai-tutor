@@ -161,6 +161,11 @@ async function submitAnswer(examType, question, answer) {
     }
 }
 
+function mapImageHtml(q) {
+    if (!q || !q.image) return '';
+    return `<div class="map-image-wrap"><img class="map-image" src="${q.image}" alt="Историческая карта" loading="lazy"></div>`;
+}
+
 function renderQuestion(data) {
     const examType = document.getElementById('exam-type').value;
     if (!data || !data.question) {
@@ -171,7 +176,7 @@ function renderQuestion(data) {
         ? `<span class="fipi-badge">Задание ${data.fipi_numbers.join(', ')}</span>` : '';
     if (data.options) {
         // ОГЭ — выбор ответа
-        let html = `<div class="question">${fipiBadge}${data.question}</div><div class="options">`;
+        let html = `<div class="question">${fipiBadge}${data.question}</div>${mapImageHtml(data)}<div class="options">`;
         data.options.forEach((opt, i) => {
             html += `<button class="option" data-idx="${i}" data-correct="${i === data.correct_index}">${i + 1}. ${opt}</button>`;
         });
@@ -198,6 +203,7 @@ function renderQuestion(data) {
         // ЕГЭ — краткий ответ
         practiceContent.innerHTML = `
             <div class="question">${fipiBadge}${data.question}</div>
+            ${mapImageHtml(data)}
             <input type="text" id="ege-answer" placeholder="Введи ответ...">
             <button class="btn-primary" id="ege-check">Проверить</button>
             <div class="explanation" id="explanation"></div>
@@ -306,6 +312,7 @@ function renderFullTestQuestion() {
                 <span class="test-points">${q.points || 1} балл(а)</span>
             </div>
             <div class="test-question">${q.question}</div>
+            ${mapImageHtml(q)}
             ${body}
             <div class="test-feedback" id="test-feedback"></div>
             <div class="test-nav">
@@ -849,6 +856,7 @@ function renderPlacementQuestion() {
             <div class="placement-progress">Вопрос ${placementIndex + 1} из ${placementQuestions.length}</div>
             <div class="placement-class">${q.class} класс</div>
             <div class="placement-question">${q.question}</div>
+            ${mapImageHtml(q)}
             <div class="placement-options">
                 ${q.options.map((opt, i) => `
                     <button class="placement-option" data-index="${i}">${opt}</button>
@@ -1019,6 +1027,7 @@ function renderTrainQuestion() {
                 <span class="test-type-badge">${typeLabel}</span>
             </div>
             <div class="test-question">${q.question}</div>
+            ${mapImageHtml(q)}
             ${body}
             <div class="test-feedback" id="train-feedback"></div>
             <div class="test-nav">
