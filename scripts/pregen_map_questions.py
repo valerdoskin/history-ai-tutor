@@ -231,6 +231,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mock", action="store_true", help="режим заглушки (без API)")
     parser.add_argument("--limit", type=int, default=0, help="обработать только N записей")
+    parser.add_argument("--class", dest="cls_filter", type=int, default=0,
+                        help="обработать только записи указанного класса")
     args = parser.parse_args()
 
     maps = load_json(MAPS_FILE)
@@ -239,6 +241,8 @@ def main():
 
     # Записи с изображением
     records_with_image = [m for m in maps if m.get("image")]
+    if args.cls_filter:
+        records_with_image = [m for m in records_with_image if m.get("class") == args.cls_filter]
     logger.info(f"Всего записей в maps.json: {len(maps)}")
     logger.info(f"Записей с изображением: {len(records_with_image)}")
 
