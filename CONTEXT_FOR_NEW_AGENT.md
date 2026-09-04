@@ -99,21 +99,23 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 ## 3. Текущее состояние (проверено 2026-09-03)
 
 ### Git
-- **Ветка:** `main`, последний коммит `a98a95f` (Добавить исторические карты 7 класса «История России»).
+- **Ветка:** `main`, последний коммит `21cf512` (Добавить исторические карты 8 класса).
 - **Git status:** незакоммичено только изменение `books/6_klass._Istoriya_Rossii.pdf` и
   `books/8_klass_Vseobschaya_istoriya_.pdf` (предыдущая работа, не относится к картам).
-- Ключевые коммиты (свежие): `a98a95f` (карты 7 класса Россия) -> `b46e04c` (карты 7 класса Всеобщая)
-  -> `8c104a4` (карты 6 класса Всеобщая) -> `15ddd1f` (карты 6 класса Россия) -> `9b60515`
-  (карты 5 класса + метод добавления) -> `42af06c` (предгенерация map-вопросов) -> ...
+- Ключевые коммиты (свежие): `21cf512` (карты 8 класса) -> `a98a95f` (карты 7 класса Россия)
+  -> `b46e04c` (карты 7 класса Всеобщая) -> `8c104a4` (карты 6 класса Всеобщая) -> `15ddd1f`
+  (карты 6 класса Россия) -> `9b60515` (карты 5 класса + метод добавления) -> `42af06c`
+  (предгенерация map-вопросов) -> ...
 - Папки `knowledge/fipi_official/`, `tutor_bot.db`, `map_preview/` — в `.gitignore` (не коммитим).
 
 ### Flask-сервер
-- **Запущен:** порт 44450 (перезапущен после добавления карт 7 класса Россия, чтобы загрузить свежий кэш вопросов).
+- **Запущен:** порт 44450 (перезапущен после добавления карт 8 класса, чтобы загрузить свежий кэш вопросов).
 - `/api/health` отвечает `{"status":"ok"}`.
 - **ВАЖНО (урок):** сервер кэширует question_bank.json в памяти при старте (`_question_types_cache`).
   После добавления новых вопросов в банк сервер НУЖНО перезапускать, иначе новые вопросы не появятся в API.
 - **Проверено после перезапуска:** `/api/exam?qtype=map` и `/api/train?qtype=map` возвращают карты
-  классов 5-7 (в т.ч. новые ross7_266-269.png); все статические файлы карт доступны (HTTP 200).
+  классов 5-8 (в т.ч. новые ross8_372-378.png и vseob8_230-235.png); все 14 статических файлов
+  карт 8 класса доступны (HTTP 200).
 
 ### База знаний (chunks.json)
 - **Всего чанков: 6667** (список словарей).
@@ -131,11 +133,11 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
   paragraph_title, paragraph_number, page_start, page_end, main_question, metadata`.
 
 ### Банк вопросов (question_bank.json)
-- **dict из 1356 вопросов.** Формат: `{вопрос: {class, answer, type, distractors}}`.
+- **dict из 1383 вопросов.** Формат: `{вопрос: {class, answer, type, distractors}}`.
 - По типам: `fact` — 599, `cause_effect` — 348, `understanding` — 132, `term` — 94,
-  `chronology` — 41, `comparison` — 31, `culture` — 30, `argumentation` — 20, `map` — 61 (60 с image).
-- **60 map-вопросов с image:** 12 для класса 5, 29 для класса 6 (rus_234-237.png + vseob_*.png),
-  19 для класса 7 (vseob7_*.png + ross7_*.png).
+  `chronology` — 41, `comparison` — 31, `culture` — 30, `argumentation` — 20, `map` — 88 (87 с image).
+- **87 map-вопросов с image:** 12 для класса 5, 29 для класса 6 (rus_234-237.png + vseob_*.png),
+  19 для класса 7 (vseob7_*.png + ross7_*.png), 27 для класса 8 (ross8_372-378.png + vseob8_230-235.png).
 - **ВАЖНО:** `llm_distractors.json` больше НЕ существует — он объединён в `question_bank.json`
   (коммит `696c729`). Дистракторы хранятся в поле `distractors` каждой записи.
 - **Примечание:** во время браузерного тестирования запущенный сервер автоматически добавляет
@@ -151,10 +153,13 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 - `knowledge/culture.json` — **список из 1125 записей** (не dict). Структура записи:
   `{name, type, author, year, period, class, fipi_codes, description, source_chunk_id}`.
   type: architecture | painting | sculpture | literature | music | science.
-- `knowledge/maps.json` — **список из 201 записи** (не dict). Структура записи:
+- `knowledge/maps.json` — **список из 245 записей** (не dict). Структура записи:
   `{name, period, class, description, key_objects, fipi_codes, source_chunk_id, image}`.
-  - **15 записей имеют поле `image`:** 9 для класса 5 (greek_colonization, alexander_macedon, stoianki,
-    zemledelie, mezhdurechye, palestina, indiya, afiny, ptolemei) + 6 для класса 6 (rus_234-237.png).
+  - **84 записи имеют поле `image`:** 9 для класса 5 (greek_colonization, alexander_macedon, stoianki,
+    zemledelie, mezhdurechye, palestina, indiya, afiny, ptolemei) + 6 для класса 6 (rus_234-237.png)
+    + 20 для класса 6 Всеобщая (vseob6_*.png) + 6 для класса 7 Всеобщая (vseob7_*.png)
+    + 4 для класса 7 Россия (ross7_266-269.png) + 14 для класса 8 (ross8_372-378.png + vseob8_230-235.png)
+    + 27 записей 8 класса с image (9 новых + 18 существующих, к которым добавлен image).
   - Все записи имеют `source_chunk_id`, точно совпадающий с id чанка в chunks.json
     (в source_chunk_id используется табуляция `\t`). По source_chunk_id можно найти чанк,
     а по paragraph_title и source_file — собрать весь текст параграфа.
@@ -408,6 +413,33 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
   возвращают карты ross7_*; все 4 PNG доступны (HTTP 200).
 - **Закоммичено:** `a98a95f`.
 
+### 4.16. Добавление исторических карт 8 класса (2026-09-03)
+- **Учебники:** «Всеобщая история. 8 класс» (`8_klass_Vseobschaya_istoriya_.pdf`) и
+  «История России. 8 класс» (`Za_8_klass.pdf`).
+- **Пользователь добавил карты** в `map_preview/8/vseobschaya/` (6 JPG, физические 230-235, оглавление +2)
+  и `map_preview/8/Za/` (9 JPG, физические 372-379, оглавление +2).
+- **Карты vseobschaya (6):** КАРТА 1. Европа в 1763 г. (физ 230), КАРТА 2. Война за независимость США
+  1775—1783 гг. (физ 231), КАРТА 3. Наполеоновские войны (физ 232), КАРТА 4. Латинская Америка в XVIII —
+  начале XIX в. (физ 233), КАРТА 5. Путешествия и открытия XVIII в. (физ 234), КАРТА 6. Страны Востока
+  в XVIII в. (физ 235).
+- **Карты Za (8, Карта 9 исключена как копия Карты 1):** Карта 1. Северная война 1700—1721 гг. (физ 372),
+  Карта 2. Участие России в Семилетней войне 1756—1763 гг. (физ 373), Карта 3. Россия во второй половине
+  XVIII в. (европейская часть) (физ 374), Карта 4. Русско-турецкая война 1768—1774 гг. (физ 375),
+  Карта 5. Русско-турецкая война 1787—1791 гг. (физ 376), Карта 6. Разделы Речи Посполитой (физ 377),
+  Карта 7. Вторжение армии Наполеона в Россию в июне—сентябре 1812 г. (физ 378 (1)),
+  Карта 8. Изгнание армии Наполеона из России в сентябре—декабре 1812 г. (физ 378 (2)).
+- **Параграфы карт vseobschaya (по содержанию):** Карта 1 → §1-2, Карта 2 → §14-15, Карта 3 → §16-17,
+  Карта 4 → §18-19, Карта 5 → §20-21, Карта 6 → §22-23.
+- **Параграфы карт Za (по упоминаниям в тексте):** Карта 1 → §5-6, §7-8, §9; Карта 6 → §37;
+  Карта 7 → §49-50; Карта 8 → §49-50.
+- **Реализовано:** 14 PNG (ross8_372.png ... ross8_378_2.png + vseob8_230.png ... vseob8_235.png),
+  9 новых записей в maps.json (236 → 245), image добавлен к 18 существующим записям 8 класса
+  (всего 84 записи с image), 27 map-вопросов через LLM (question_bank 1356 → 1383, 87 map с image).
+  В `scripts/pregen_map_questions.py` добавлен параметр `--class` для фильтрации по классу.
+- **Проверено:** сервер перезапущен на порту 44450; `/api/exam?qtype=map` и `/api/train?qtype=map`
+  возвращают карты 8 класса; все 14 PNG доступны (HTTP 200).
+- **Закоммичено:** `21cf512`.
+
 ---
 
 
@@ -459,10 +491,10 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 | `static/webapp.js` | Логика веб-интерфейса |
 | `knowledge/chunks.json` | База знаний (6667 чанков, все с валидными fipi_codes) |
 | `knowledge/enriched.json` | Обогащённые параграфы (358) |
-| `knowledge/question_bank.json` | Банк вопросов (1356, включая 60 map-вопросов с image: 12 класс 5 + 29 класс 6 + 19 класс 7) |
+| `knowledge/question_bank.json` | Банк вопросов (1383, включая 87 map-вопросов с image: 12 класс 5 + 29 класс 6 + 19 класс 7 + 27 класс 8) |
 | `knowledge/culture.json` | Справочник по культуре (1125 записей, список) |
-| `knowledge/maps.json` | Справочник по картам (236 записей, список; 57 с полем image) |
-| `static/maps/` | Изображения карт (43 PNG: классы 5-7, включая vseob_*, vseob7_*, ross7_*) |
+| `knowledge/maps.json` | Справочник по картам (245 записей, список; 84 с полем image) |
+| `static/maps/` | Изображения карт (57 PNG: классы 5-8, включая vseob_*, vseob7_*, ross7_*, ross8_*, vseob8_*) |
 | `scripts/pregen_map_questions.py` | Предварительная генерация map-вопросов через LLM |
 | `map_preview/5/`, `map_preview/6/rossii/` | Вырезанные пользователем карты (JPG) + notes.md (группа B) |
 | `knowledge/source_questions.json` | Источники (28) |
@@ -586,8 +618,8 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
       **Осталось:** расширить на остальные учебники (6-11) по методу из раздела 13.
 - [ ] Пройти тест уровня в браузере до конца (все 24 вопроса) — функциональность подтверждена
       через API и юнит-тесты, но полный проход в UI не завершён.
-- [ ] Расширить банк вопросов дальше (сейчас 1356) — например, добавить больше вопросов по
-      культуре и картам (сейчас culture=30, map=61).
+- [ ] Расширить банк вопросов дальше (сейчас 1383) — например, добавить больше вопросов по
+      культуре и картам (сейчас culture=30, map=88).
 - [ ] Улучшить качество автогенерируемых дистракторов для chronology-вопросов (при тестировании
       сервер добавлял не всегда корректные дистракторы — см. раздел 3).
 - [ ] Интеграция с Telegram-ботом (проверка работы новых режимов через Telegram Web App).
@@ -640,8 +672,9 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 Если запись уже существует в maps.json (например, карта уже была в списке), просто добавить поле `image`.
 
 **Шаг 6. Сгенерировать map-вопросы через LLM.** Запустить `scripts/pregen_map_questions.py` для записей
-с image. Скрипт находит текст параграфа по source_chunk_id, генерирует вопрос через LLM (DeepSeek → Groq),
-сохраняет в question_bank.json с полем `image`. Скрипт пропускает записи, для которых вопрос уже есть в банке.
+с image (можно фильтровать по классу через `--class N`). Скрипт находит текст параграфа по source_chunk_id,
+генерирует вопрос через LLM (DeepSeek → Groq), сохраняет в question_bank.json с полем `image`.
+Скрипт пропускает записи, для которых вопрос уже есть в банке.
 
 **Шаг 7. Перезапустить сервер.** Сервер кэширует question_bank.json в памяти при старте
 (`_question_types_cache`). Без перезапуска новые вопросы НЕ появятся в API.
@@ -653,10 +686,10 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 
 | Файл/функция | Назначение |
 |--------------|-----------|
-| `knowledge/maps.json` | Справочник по картам (236 записей, 57 с image). Добавлять записи с полем `image` |
-| `knowledge/question_bank.json` | Банк вопросов (1356). Сюда сохраняются сгенерированные map-вопросы |
-| `static/maps/` | Папка с PNG-изображениями карт (43 файла) |
-| `scripts/pregen_map_questions.py` | Генерация map-вопросов через LLM. `get_paragraph_text()` (строка 153) ищет чанк по точному совпадению `id == source_chunk_id`. Аргументы: `--mock`, `--limit N` |
+| `knowledge/maps.json` | Справочник по картам (245 записей, 84 с image). Добавлять записи с полем `image` |
+| `knowledge/question_bank.json` | Банк вопросов (1383). Сюда сохраняются сгенерированные map-вопросы |
+| `static/maps/` | Папка с PNG-изображениями карт (57 файлов) |
+| `scripts/pregen_map_questions.py` | Генерация map-вопросов через LLM. `get_paragraph_text()` (строка 153) ищет чанк по точному совпадению `id == source_chunk_id`. Аргументы: `--mock`, `--limit N`, `--class N` |
 | `services/exam_service.py` | `_registry_questions()` (строка 244) возвращает поле `image` (строка 265). `generate_map_question()` (строка 540) сначала берёт из банка вопросы с image, при отсутствии — fallback на лету из maps.json. `_load_question_types()` (строка 91) кэширует question_bank.json в `_question_types_cache` |
 | `map_preview/<класс>/notes.md` | Информация о картах группы B для последующей проверки |
 
@@ -669,7 +702,7 @@ cd /workspace/project/history-ai-tutor && python3 rebuild_qdrant.py --chunks kno
 | 6 | `6_klass_Vseobschaya_istoriya_.pdf` | **СДЕЛАНО** (20 карт приложения, стр. 238-255) |
 | 7 | `7_klass_Vseobschaya_istoriya_.pdf` | **СДЕЛАНО** (6 карт, стр. 231-237) |
 | 7 | `7_klass_._Istoriya_Rossii.pdf` | **СДЕЛАНО** (4 карты приложения, стр. 266-269) |
-| 8 | `8_klass_Vseobschaya_istoriya_.pdf` + `Za_8_klass.pdf` | 29 |
+| 8 | `8_klass_Vseobschaya_istoriya_.pdf` + `Za_8_klass.pdf` | **СДЕЛАНО** (14 карт: 6 vseobschaya + 8 Za) |
 | 9 | `Za_9_klass.pdf` | 17 |
 | 10 | `Istoriya_Rossii_10kl_2023.pdf` + `Vseobschaya_10.pdf` | 88 |
 | 11 | `Istoriya_Rossii_11kl_2023.pdf` + `Vseobschaya_11.pdf` | 2 |
