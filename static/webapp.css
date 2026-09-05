@@ -1236,3 +1236,122 @@ body {
         padding: 12px 10px;
     }
 }
+
+/* ===== Lightbox для увеличения карт ===== */
+.map-image-wrap {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.map-image {
+    cursor: zoom-in;
+}
+
+.map-image-zoom-hint {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 2;
+}
+
+.map-image-wrap:hover .map-image-zoom-hint {
+    opacity: 1;
+}
+
+.map-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.88);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+}
+
+.map-lightbox[hidden] {
+    display: none;
+}
+
+.map-lightbox-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #16213e;
+    border-bottom: 1px solid #333;
+    flex-shrink: 0;
+}
+
+.map-lightbox-title {
+    color: #eee;
+    font-size: 15px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.map-lightbox-controls {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.map-lightbox-btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #eee;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.map-lightbox-btn:hover {
+    background: #e94560;
+}
+
+.map-lightbox-close {
+    background: #e94560;
+}
+
+.map-lightbox-close:hover {
+    background: #ff6b6b;
+}
+
+.map-lightbox-viewport {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+    touch-action: none;
+}
+
+.map-lightbox-viewport.dragging {
+    cursor: grabbing;
+}
+
+.map-lightbox-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+    user-select: none;
+    -webkit-user-drag: none;
+    max-width: none;
+    max-height: none;
+    will-change: transform;
+}

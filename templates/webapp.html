@@ -130,6 +130,22 @@
         </section>
     </div>
 
+    <!-- Lightbox для увеличения карт -->
+    <div id="map-lightbox" class="map-lightbox" hidden>
+        <div class="map-lightbox-toolbar">
+            <span class="map-lightbox-title">🔍 Историческая карта</span>
+            <div class="map-lightbox-controls">
+                <button type="button" class="map-lightbox-btn" data-action="zoom-out" title="Уменьшить">−</button>
+                <button type="button" class="map-lightbox-btn" data-action="zoom-in" title="Увеличить">+</button>
+                <button type="button" class="map-lightbox-btn" data-action="reset" title="Сбросить масштаб">⟲</button>
+                <button type="button" class="map-lightbox-btn map-lightbox-close" data-action="close" title="Закрыть">✕</button>
+            </div>
+        </div>
+        <div class="map-lightbox-viewport" id="map-lightbox-viewport">
+            <img id="map-lightbox-img" class="map-lightbox-img" alt="Историческая карта (увеличенная)">
+        </div>
+    </div>
+
     <script src="/static/webapp.js"></script>
 </body>
 </html>

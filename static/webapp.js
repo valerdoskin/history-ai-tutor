@@ -163,7 +163,7 @@ async function submitAnswer(examType, question, answer) {
 
 function mapImageHtml(q) {
     if (!q || !q.image) return '';
-    return `<div class="map-image-wrap"><img class="map-image" src="${q.image}" alt="Историческая карта" loading="lazy"></div>`;
+    return `<div class="map-image-wrap"><span class="map-image-zoom-hint">🔍 Увеличить</span><img class="map-image" src="${q.image}" alt="Историческая карта" loading="lazy"></div>`;
 }
 
 function renderQuestion(data) {
@@ -1166,3 +1166,205 @@ function showTrainResult() {
         content.innerHTML = '<p class="hint">Выбери тип задания и начни тренировку!</p>';
     });
 }
+
+/* ===== Lightbox для увеличения карт ===== */
+(function () {
+    const lightbox = document.getElementById('map-lightbox');
+    const viewport = document.getElementById('map-lightbox-viewport');
+    const img = document.getElementById('map-lightbox-img');
+    if (!lightbox || !viewport || !img) return;
+
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+    let baseW = 0;
+    let baseH = 0;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+    let startTx = 0;
+    let startTy = 0;
+    let pinchDist = 0;
+    let pinchScale = 1;
+
+    const MIN_SCALE = 1;
+    const MAX_SCALE = 8;
+    const ZOOM_STEP = 0.5;
+
+    function applyTransform() {
+        img.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+    }
+
+    function resetView() {
+        scale = 1;
+        tx = 0;
+        ty = 0;
+        applyTransform();
+    }
+
+    function fitToViewport() {
+        // Масштабируем карту так, чтобы она целиком помещалась в viewport
+        const vw = viewport.clientWidth;
+        const vh = viewport.clientHeight;
+        if (!vw || !vh || !baseW || !baseH) return;
+        const fit = Math.min(vw / baseW, vh / baseH, 1);
+        scale = fit;
+        tx = (vw - baseW * scale) / 2;
+        ty = (vh - baseH * scale) / 2;
+        applyTransform();
+    }
+
+    function clampPan() {
+        const vw = viewport.clientWidth;
+        const vh = viewport.clientHeight;
+        const w = baseW * scale;
+        const h = baseH * scale;
+        const minX = Math.min(0, vw - w);
+        const maxX = Math.max(0, vw - w);
+        const minY = Math.min(0, vh - h);
+        const maxY = Math.max(0, vh - h);
+        tx = Math.max(minX, Math.min(maxX, tx));
+        ty = Math.max(minY, Math.min(maxY, ty));
+        applyTransform();
+    }
+
+    function zoomAt(px, py, factor) {
+        const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale * factor));
+        if (newScale === scale) return;
+        // Точка под курсором (px, py) в координатах карты
+        const wx = (px - tx) / scale;
+        const wy = (py - ty) / scale;
+        scale = newScale;
+        tx = px - wx * scale;
+        ty = py - wy * scale;
+        clampPan();
+    }
+
+    function openLightbox(src) {
+        img.src = src;
+        lightbox.hidden = false;
+        document.body.style.overflow = 'hidden';
+        resetView();
+        // После загрузки изображения подгоняем под viewport
+        img.onload = function () {
+            baseW = img.naturalWidth;
+            baseH = img.naturalHeight;
+            fitToViewport();
+        };
+        // Если изображение уже в кэше, onload может не сработать
+        if (img.complete && img.naturalWidth) {
+            baseW = img.naturalWidth;
+            baseH = img.naturalHeight;
+            fitToViewport();
+        }
+    }
+
+    function closeLightbox() {
+        lightbox.hidden = true;
+        document.body.style.overflow = '';
+        img.src = '';
+        resetView();
+    }
+
+    // Делегирование клика по картам (карты рендерятся динамически)
+    document.addEventListener('click', function (e) {
+        const mapEl = e.target.closest('.map-image');
+        if (mapEl && mapEl.src) {
+            openLightbox(mapEl.src);
+        }
+    });
+
+    // Кнопки тулбара и клик по фону
+    lightbox.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-action]');
+        if (btn) {
+            const action = btn.dataset.action;
+            if (action === 'zoom-in') zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, 1 + ZOOM_STEP);
+            else if (action === 'zoom-out') zoomAt(viewport.clientWidth / 2, viewport.clientHeight / 2, 1 - ZOOM_STEP);
+            else if (action === 'reset') fitToViewport();
+            else if (action === 'close') closeLightbox();
+            return;
+        }
+        // Клик по фону (вне изображения) — закрыть
+        if (e.target === lightbox || e.target === viewport) {
+            closeLightbox();
+        }
+    });
+
+    // Колесо мыши — зум к курсору
+    viewport.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        const rect = viewport.getBoundingClientRect();
+        const px = e.clientX - rect.left;
+        const py = e.clientY - rect.top;
+        const factor = e.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
+        zoomAt(px, py, factor);
+    }, { passive: false });
+
+    // Pointer Events: drag мышью/пальцем (панорамирование) и pinch (зум)
+    let pointers = new Map();
+    viewport.addEventListener('pointerdown', function (e) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        viewport.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 1) {
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startTx = tx;
+            startTy = ty;
+            viewport.classList.add('dragging');
+        } else if (pointers.size === 2) {
+            dragging = false;
+            const pts = [...pointers.values()];
+            pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+            pinchScale = scale;
+        }
+        e.preventDefault();
+    });
+
+    viewport.addEventListener('pointermove', function (e) {
+        if (!pointers.has(e.pointerId)) return;
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (pointers.size === 2) {
+            const pts = [...pointers.values()];
+            const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+            if (pinchDist > 0) {
+                const rect = viewport.getBoundingClientRect();
+                const cx = (pts[0].x + pts[1].x) / 2 - rect.left;
+                const cy = (pts[0].y + pts[1].y) / 2 - rect.top;
+                const factor = dist / pinchDist;
+                const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, pinchScale * factor));
+                const wx = (cx - tx) / scale;
+                const wy = (cy - ty) / scale;
+                scale = newScale;
+                tx = cx - wx * scale;
+                ty = cy - wy * scale;
+                clampPan();
+            }
+        } else if (pointers.size === 1 && dragging) {
+            tx = startTx + (e.clientX - startX);
+            ty = startTy + (e.clientY - startY);
+            clampPan();
+        }
+    });
+
+    function endPointer(e) {
+        pointers.delete(e.pointerId);
+        if (pointers.size < 2) pinchDist = 0;
+        if (pointers.size === 0) {
+            dragging = false;
+            viewport.classList.remove('dragging');
+        }
+    }
+
+    viewport.addEventListener('pointerup', endPointer);
+    viewport.addEventListener('pointercancel', endPointer);
+
+    // Закрытие по Esc
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !lightbox.hidden) {
+            closeLightbox();
+        }
+    });
+})();
