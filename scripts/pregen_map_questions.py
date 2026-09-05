@@ -190,6 +190,7 @@ def generate_map_question(record, paragraph_text, mock=False):
     description = record.get("description", "")
     key_objects = record.get("key_objects", [])
     cls = record.get("class")
+    instruction = record.get("question_instruction", "")
 
     user_prompt = (
         f"Название карты: {name}\n"
@@ -199,6 +200,8 @@ def generate_map_question(record, paragraph_text, mock=False):
         f"Текст параграфа учебника (описывает то, что показано на карте):\n{paragraph_text}\n\n"
         f"Составь вопрос по этой карте."
     )
+    if instruction:
+        user_prompt += f"\n\nДополнительное требование к вопросу: {instruction}"
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
